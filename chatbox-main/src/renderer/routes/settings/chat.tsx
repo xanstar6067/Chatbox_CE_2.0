@@ -1,9 +1,26 @@
-import { Box, Button, FileButton, Flex, Slider, Stack, Switch, Text, Textarea, Title, Tooltip } from '@mantine/core'
+import {
+  Box,
+  Button,
+  FileButton,
+  Flex,
+  Select,
+  Slider,
+  Stack,
+  Switch,
+  Text,
+  Textarea,
+  TextInput,
+  Title,
+  Tooltip,
+} from '@mantine/core'
 import { chatSessionSettings, getDefaultPrompt } from '@shared/defaults'
+import type { CompactionPrompt } from '@shared/types'
 import { IconInfoCircle } from '@tabler/icons-react'
 import { createFileRoute } from '@tanstack/react-router'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { v4 as uuidv4 } from 'uuid'
+import { AdaptiveModal } from '@/components/common/AdaptiveModal'
 import { AssistantAvatar, UserAvatar } from '@/components/common/Avatar'
 import { Divider } from '@/components/common/Divider'
 import MaxContextMessageCountSlider from '@/components/common/MaxContextMessageCountSlider'
@@ -11,6 +28,12 @@ import { MessageLayoutSelector } from '@/components/common/MessageLayoutPreview'
 import { ScalableIcon } from '@/components/common/ScalableIcon'
 import SliderWithInput from '@/components/common/SliderWithInput'
 import { handleImageInputAndSave, ImageInStorage } from '@/components/Image'
+import { languageNameMap } from '@/i18n/locales'
+import {
+  DETAILED_COMPACTION_PROMPT_ID,
+  ROLEPLAY_COMPACTION_PROMPT_ID,
+  resolveCompactionPrompt,
+} from '@/packages/prompts'
 import storage from '@/storage'
 import { StorageKeyGenerator } from '@/storage/StoreStorage'
 import { useSettingsStore } from '@/stores/settingsStore'
@@ -160,7 +183,7 @@ export function RouteComponent() {
         <MaxContextMessageCountSlider
           wrapperProps={{ gap: 'xxs' }}
           labelProps={{ fw: undefined }}
-          value={settings?.maxContextMessageCount ?? chatSessionSettings().maxContextMessageCount!}
+          value={settings?.maxContextMessageCount ?? chatSessionSettings().maxContextMessageCount ?? 20}
           onChange={(v) => setSettings({ maxContextMessageCount: v })}
         />
 
@@ -508,6 +531,8 @@ function ContextManagementSection() {
         </Text>
       </Stack>
 
+      <CompactionPromptManager />
+
       {/* Compaction Threshold Slider */}
       <Stack gap="sm">
         <Flex align="center" gap="xs">
@@ -551,5 +576,191 @@ function ContextManagementSection() {
         </Text>
       </Stack>
     </Stack>
+  )
+}
+
+interface CompactionPromptEditorState {
+  id?: string
+  name: string
+  prompt: string
+}
+
+function CompactionPromptManager() {
+  const { t } = useTranslation()
+  const { setSettings, ...settings } = useSettingsStore((state) => state)
+  const [editor, setEditor] = useState<CompactionPromptEditorState | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const customPrompts = settings.compactionPrompts ?? []
+  const configuredPromptId = settings.activeCompactionPromptId ?? DETAILED_COMPACTION_PROMPT_ID
+  const selectedCustomPrompt = customPrompts.find((item) => item.id === configuredPromptId)
+  const selectedPromptId =
+    configuredPromptId === DETAILED_COMPACTION_PROMPT_ID ||
+    configuredPromptId === ROLEPLAY_COMPACTION_PROMPT_ID ||
+    selectedCustomPrompt
+      ? configuredPromptId
+      : DETAILED_COMPACTION_PROMPT_ID
+
+  const selectedPrompt = resolveCompactionPrompt(selectedPromptId, customPrompts, languageNameMap[settings.language])
+
+  const promptOptions = [
+    { value: DETAILED_COMPACTION_PROMPT_ID, label: t('Detailed continuity') },
+    { value: ROLEPLAY_COMPACTION_PROMPT_ID, label: t('Role-play continuity') },
+    ...customPrompts.map((item) => ({ value: item.id, label: item.name })),
+  ]
+
+  const selectedPromptDescription =
+    selectedPromptId === DETAILED_COMPACTION_PROMPT_ID
+      ? t('Preserves goals, facts, decisions, completed work, constraints, and next actions.')
+      : selectedPromptId === ROLEPLAY_COMPACTION_PROMPT_ID
+        ? t('Preserves events, locations, characters, relationships, lore, and unresolved story threads.')
+        : t('Custom compaction prompt')
+
+  const openCreateEditor = () => {
+    setEditor({
+      name: '',
+      prompt: resolveCompactionPrompt(selectedPromptId, customPrompts, '{{language}}'),
+    })
+  }
+
+  const openEditEditor = () => {
+    if (!selectedCustomPrompt) return
+    setEditor({
+      id: selectedCustomPrompt.id,
+      name: selectedCustomPrompt.name,
+      prompt: selectedCustomPrompt.prompt,
+    })
+  }
+
+  const savePrompt = () => {
+    if (!editor?.name.trim() || !editor.prompt.trim()) return
+
+    const savedPrompt: CompactionPrompt = {
+      id: editor.id ?? uuidv4(),
+      name: editor.name.trim(),
+      prompt: editor.prompt.trim(),
+    }
+    const nextPrompts = editor.id
+      ? customPrompts.map((item) => (item.id === editor.id ? savedPrompt : item))
+      : [...customPrompts, savedPrompt]
+
+    setSettings({
+      compactionPrompts: nextPrompts,
+      activeCompactionPromptId: savedPrompt.id,
+    })
+    setEditor(null)
+  }
+
+  const deleteSelectedPrompt = () => {
+    if (!selectedCustomPrompt) return
+    setSettings({
+      compactionPrompts: customPrompts.filter((item) => item.id !== selectedCustomPrompt.id),
+      activeCompactionPromptId: DETAILED_COMPACTION_PROMPT_ID,
+    })
+    setShowDeleteConfirm(false)
+  }
+
+  return (
+    <>
+      <Stack gap="sm">
+        <Stack gap="xxs">
+          <Text size="sm">{t('Compaction Prompt')}</Text>
+          <Text c="chatbox-tertiary" size="xs">
+            {t(
+              'Choose what information the model must preserve. The selected prompt is used for both automatic and manual compaction.'
+            )}
+          </Text>
+        </Stack>
+
+        <Select
+          value={selectedPromptId}
+          data={promptOptions}
+          onChange={(value) => {
+            if (value) {
+              setSettings({ activeCompactionPromptId: value })
+            }
+          }}
+          allowDeselect={false}
+        />
+
+        <Text c="chatbox-tertiary" size="xs">
+          {selectedPromptDescription}
+        </Text>
+
+        <Textarea value={selectedPrompt} readOnly autosize minRows={5} maxRows={12} label={t('Prompt Preview')} />
+
+        <Flex gap="xs" wrap="wrap">
+          <Button variant="outline" size="xs" onClick={openCreateEditor}>
+            {t('Create Custom Prompt')}
+          </Button>
+          {selectedCustomPrompt && (
+            <>
+              <Button variant="light" color="chatbox-gray" size="xs" onClick={openEditEditor}>
+                {t('Edit')}
+              </Button>
+              <Button variant="light" color="red" size="xs" onClick={() => setShowDeleteConfirm(true)}>
+                {t('Delete')}
+              </Button>
+            </>
+          )}
+        </Flex>
+      </Stack>
+
+      <AdaptiveModal
+        opened={editor !== null}
+        onClose={() => setEditor(null)}
+        title={editor?.id ? t('Edit Compaction Prompt') : t('Create Compaction Prompt')}
+        centered
+        size="lg"
+      >
+        <Stack gap="md">
+          <TextInput
+            label={t('Name')}
+            value={editor?.name ?? ''}
+            onChange={(event) =>
+              setEditor((current) => (current ? { ...current, name: event.currentTarget.value } : null))
+            }
+            autoFocus
+          />
+          <Textarea
+            label={t('Prompt')}
+            description={t('Use the {{placeholder}} placeholder where the selected app language should be inserted.', {
+              placeholder: '{{language}}',
+            })}
+            value={editor?.prompt ?? ''}
+            onChange={(event) =>
+              setEditor((current) => (current ? { ...current, prompt: event.currentTarget.value } : null))
+            }
+            autosize
+            minRows={10}
+            maxRows={20}
+          />
+          <AdaptiveModal.Actions>
+            <AdaptiveModal.CloseButton onClick={() => setEditor(null)} />
+            <Button disabled={!editor?.name.trim() || !editor.prompt.trim()} onClick={savePrompt}>
+              {t('Save')}
+            </Button>
+          </AdaptiveModal.Actions>
+        </Stack>
+      </AdaptiveModal>
+
+      <AdaptiveModal
+        opened={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        title={t('Delete Compaction Prompt')}
+        centered
+        size="sm"
+      >
+        <Stack gap="md">
+          <Text size="sm">{t('Delete this custom compaction prompt? This cannot be undone.')}</Text>
+          <AdaptiveModal.Actions>
+            <AdaptiveModal.CloseButton onClick={() => setShowDeleteConfirm(false)} />
+            <Button color="red" onClick={deleteSelectedPrompt}>
+              {t('Delete')}
+            </Button>
+          </AdaptiveModal.Actions>
+        </Stack>
+      </AdaptiveModal>
+    </>
   )
 }

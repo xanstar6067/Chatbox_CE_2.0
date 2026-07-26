@@ -102,6 +102,8 @@ export function settings(): Settings {
 
     autoCompaction: true,
     compactionThreshold: 0.6,
+    compactionPrompts: [],
+    activeCompactionPromptId: 'builtin-detailed',
 
     autoLaunch: false,
     autoUpdate: true,

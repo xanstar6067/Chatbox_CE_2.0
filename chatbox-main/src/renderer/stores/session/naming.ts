@@ -62,7 +62,7 @@ async function _generateName(sessionId: string, modifyName: (sessionId: string, 
     const result = await generateText(
       model,
       promptFormat.nameConversation(
-        session.messages.filter((m) => m.role !== 'system').slice(0, 4),
+        session.messages.filter((m) => m.role !== 'system').slice(0, 8),
         languageNameMap[settings.language]
       )
     )

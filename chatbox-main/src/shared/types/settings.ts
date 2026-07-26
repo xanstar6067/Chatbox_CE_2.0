@@ -150,6 +150,12 @@ export const SessionSettingsSchema = GlobalSessionSettingsSchema.extend({
   autoCompaction: z.boolean().optional().catch(undefined),
 })
 
+export const CompactionPromptSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  prompt: z.string().min(1),
+})
+
 const UnifiedTokenUsageDetailSchema = z.object({
   type: z.string(), // "plan" | "trial" | "invitation_reward" | ... (more types in future)
   token_usage: z.number(),
@@ -402,6 +408,8 @@ export const SettingsSchema = GlobalSessionSettingsSchema.extend({
 
   autoCompaction: z.boolean().default(true),
   compactionThreshold: z.number().min(0.4).max(0.9).default(0.6),
+  compactionPrompts: z.array(CompactionPromptSchema).default([]),
+  activeCompactionPromptId: z.string().default('builtin-detailed'),
 
   autoLaunch: z.boolean().default(false),
   autoUpdate: z.boolean().default(true), // 是否自动检查更新
@@ -422,6 +430,7 @@ export type ProviderInfo = (ProviderBaseInfo | CustomProviderBaseInfo) & Provide
 
 export type SessionSettings = z.infer<typeof SessionSettingsSchema>
 export type Settings = z.infer<typeof SettingsSchema>
+export type CompactionPrompt = z.infer<typeof CompactionPromptSchema>
 export type ProviderModelInfo = z.infer<typeof ProviderModelInfoSchema>
 export type ProviderBaseInfo = z.infer<typeof ProviderBaseInfoSchema>
 export type ProviderSettings = z.infer<typeof ProviderSettingsSchema>

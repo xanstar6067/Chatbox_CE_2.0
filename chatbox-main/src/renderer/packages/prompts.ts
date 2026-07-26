@@ -1,8 +1,12 @@
-import type { Message } from '../../shared/types'
+import type { CompactionPrompt, Message } from '../../shared/types'
 import { getMessageText } from '../../shared/utils/message'
 
 export function nameConversation(msgs: Message[], language: string): Message[] {
-  const format = (msgs: string[]) => msgs.map((msg) => msg).join('\n\n---------\n\n')
+  const conversationExcerpt = msgs
+    .slice(0, 8)
+    .map((msg) => `[${msg.role}]\n${getMessageText(msg, true, false).slice(0, 500)}`)
+    .join('\n\n---------\n\n')
+
   return [
     {
       id: '1',
@@ -10,24 +14,23 @@ export function nameConversation(msgs: Message[], language: string): Message[] {
       contentParts: [
         {
           type: 'text',
-          text: `Based on the chat history, give this conversation a name.
-Keep it short - 10 words max, no quotes.
-Use ${language}.
-Just provide the name, nothing else.
+          text: `Create a concise, informative title for the conversation below.
 
-Here's the conversation:
+The title must:
+- Capture the main topic, intent, or distinctive event so the conversation is easy to recognize later
+- Prefer specific names, projects, characters, technologies, places, or requested outcomes over generic wording
+- Preserve the meaning of the user's request; do not reduce it to a broad category such as "Question", "Help", "Discussion", or "Chat"
+- Use 3-8 words when natural and stay under 60 characters
+- Be written in ${language}
+- Contain only the title: no quotes, prefix, explanation, or ending punctuation
+
+Conversation:
 
 \`\`\`
-${
-  format(msgs.slice(0, 5).map((msg) => getMessageText(msg, true, false).slice(0, 100))) // 限制长度以节省 tokens
-}
+${conversationExcerpt}
 \`\`\`
 
-Name this conversation in 10 characters or less.
-Use ${language}.
-Only give the name, nothing else.
-
-The name is:`,
+Title:`,
         },
       ],
     },
@@ -147,16 +150,112 @@ Comply with user requests to the best of your abilities. Maintain composure and 
 `.trim()
 }
 
-export function summarizeConversation(msgs: Message[], language: string): Message[] {
-  const instructionText = `Provide a detailed summary for continuing this conversation.
-Focus on information that would be helpful for continuing, including:
-- What we discussed and why it matters
-- Key decisions made
-- What we're working on
-- What we're going to do next
+export const DETAILED_COMPACTION_PROMPT_ID = 'builtin-detailed'
+export const ROLEPLAY_COMPACTION_PROMPT_ID = 'builtin-roleplay'
 
-The new session will not have access to our conversation history.
-Write in ${language}. Be concise but complete. Do NOT include prefaces or meta-commentary.`
+const detailedCompactionPrompt = `Create a loss-minimizing continuity record of this conversation so another assistant can continue it without access to the original messages.
+
+Write in {{language}}. Preserve concrete information instead of replacing it with vague statements. Do not invent details or silently resolve contradictions. Clearly distinguish confirmed facts, user claims, assumptions, proposals, and unresolved questions.
+
+Include all sections that contain relevant information:
+
+## Purpose and context
+- The user's actual goals, motivations, and definition of a successful result
+- Relevant background and why the work matters
+
+## Important facts and constraints
+- Exact names, terminology, numbers, dates, requirements, preferences, prohibitions, and edge cases
+- External facts or source conclusions already established
+
+## Decisions and reasoning
+- Decisions made, alternatives rejected, and the reasons or tradeoffs behind them
+- Corrections, changed requirements, and misunderstandings that were resolved
+
+## Work completed
+- What was done and the result
+- For technical work, preserve exact file paths, commands, APIs, identifiers, errors, code behavior, and verification results when relevant
+- For writing or creative work, preserve the chosen direction, voice, structure, terminology, and approved passages or concepts
+
+## Current state
+- What is in progress, what is blocked, and what remains uncertain
+- Any artifacts, drafts, plans, data, or state the next assistant must continue from
+
+## Next actions
+- Explicit commitments and the most logical next steps, in order
+- Questions that still require an answer
+
+## Latest interaction
+- What happened in the most recent exchange and exactly what response or action is expected next
+
+Retain an earlier summary included in the conversation, but update it with everything that happened afterward. Prefer completeness and continuity over brevity. Do not add a preface, commentary about summarizing, advice to the next assistant, or facts not present in the conversation.`
+
+const roleplayCompactionPrompt = `Create a detailed continuity record for continuing this role-play without access to the original messages. Treat established story details as persistent state, not as disposable prose.
+
+Write in {{language}}. Preserve every fact that may affect later scenes. Never invent events, motivations, knowledge, or world rules. Do not silently reconcile contradictions: mark uncertainty, conflicting accounts, suspicions, lies, and out-of-character knowledge separately from confirmed canon.
+
+Use the following sections whenever they contain relevant information:
+
+## Current scene
+- Exact location, time or time-of-day, atmosphere, present characters, positions, physical conditions, clothing, carried items, and immediate situation
+- The last action, line, revelation, or interruption, including whose response or action is currently pending
+
+## Story chronology
+- A chronological, cause-and-effect account of significant events
+- Preserve actions, discoveries, promises, bargains, conflicts, victories, failures, consequences, and changes of plan
+- Do not collapse concrete events into vague phrases such as "they had adventures" or "their relationship developed"
+
+## Characters
+- For every relevant character: names and aliases, identity, role, appearance, personality and manner of speech, goals, fears, loyalties, abilities, limitations, injuries, status, possessions, and current intentions
+- What each character knows, believes, suspects, misunderstands, conceals, or must not know
+- Keep player characters, non-player characters, narrators, and out-of-character participants distinct
+
+## Relationships
+- Current relationship dynamics between characters: trust, attraction, affection, resentment, fear, power balance, obligations, agreements, boundaries, conflicts, and dependencies
+- Explain how and why each relationship changed through specific events
+
+## World, locations, and factions
+- Established lore, rules, customs, geography, factions, politics, magic or technology systems, and other setting constraints
+- Visited or mentioned locations and concrete details needed to portray them consistently
+
+## Continuity details
+- Exact proper names, descriptions, dates, quantities, codes, clues, items, injuries, abilities, secrets, recurring motifs, and other details likely to cause continuity errors if lost
+- Explicit role-play rules, content boundaries, style preferences, point of view, tense, formatting conventions, character instructions, and out-of-character requests from the user
+
+## Open threads
+- Unfinished goals, mysteries, threats, plans, promises, conflicts, relationships, and anticipated events
+- For each thread, state its current status and who knows about it
+
+## Immediate continuation
+- The emotional and physical state at the stopping point
+- What the scene is naturally waiting for next, without deciding or writing that next event
+
+If an earlier summary appears in the conversation, retain its still-valid canon and merge in all later developments. Continuity is more important than brevity. Do not add a preface, literary critique, generic advice, or new story content.`
+
+export function isBuiltInCompactionPromptId(promptId: string): boolean {
+  return promptId === DETAILED_COMPACTION_PROMPT_ID || promptId === ROLEPLAY_COMPACTION_PROMPT_ID
+}
+
+export function resolveCompactionPrompt(
+  promptId: string | undefined,
+  customPrompts: CompactionPrompt[] | undefined,
+  language: string
+): string {
+  let prompt: string
+
+  if (promptId === ROLEPLAY_COMPACTION_PROMPT_ID) {
+    prompt = roleplayCompactionPrompt
+  } else if (promptId && !isBuiltInCompactionPromptId(promptId)) {
+    prompt = customPrompts?.find((item) => item.id === promptId)?.prompt ?? detailedCompactionPrompt
+  } else {
+    prompt = detailedCompactionPrompt
+  }
+
+  return prompt.replace(/\{\{\s*language\s*\}\}/gi, language).trim()
+}
+
+export function summarizeConversation(msgs: Message[], language: string, customInstruction?: string): Message[] {
+  const instructionText =
+    customInstruction ?? resolveCompactionPrompt(DETAILED_COMPACTION_PROMPT_ID, undefined, language)
 
   const instructionMessage: Message = {
     id: `summary-instruction-${Date.now()}`,

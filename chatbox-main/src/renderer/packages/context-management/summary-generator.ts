@@ -37,7 +37,12 @@ export async function generateSummary(options: SummaryGeneratorOptions): Promise
   try {
     const model = await createModel(settings)
 
-    const promptMessages = promptFormat.summarizeConversation(messages, languageName)
+    const compactionPrompt = promptFormat.resolveCompactionPrompt(
+      globalSettings.activeCompactionPromptId,
+      globalSettings.compactionPrompts,
+      languageName
+    )
+    const promptMessages = promptFormat.summarizeConversation(messages, languageName, compactionPrompt)
     const result = await generateText(model, promptMessages)
 
     const summary =
@@ -136,7 +141,12 @@ export async function generateSummaryWithStream(options: StreamingSummaryOptions
   try {
     const model = await createModel(settings)
 
-    const promptMessages = promptFormat.summarizeConversation(messages, languageName)
+    const compactionPrompt = promptFormat.resolveCompactionPrompt(
+      globalSettings.activeCompactionPromptId,
+      globalSettings.compactionPrompts,
+      languageName
+    )
+    const promptMessages = promptFormat.summarizeConversation(messages, languageName, compactionPrompt)
     const coreMessages = await convertToModelMessages(promptMessages, { modelSupportVision: model.isSupportVision() })
 
     const result = await model.chat(coreMessages, {
