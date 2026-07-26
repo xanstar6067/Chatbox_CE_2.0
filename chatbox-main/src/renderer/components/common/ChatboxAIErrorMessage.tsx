@@ -9,6 +9,7 @@ import { buildChatboxUrl } from '@/packages/remote'
 import platform from '@/platform'
 import * as settingActions from '@/stores/settingActions'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { CHATBOX_COMMERCE_LINKS_ENABLED } from '@/variables'
 
 interface ChatboxAIErrorMessageProps {
   errorCode: number
@@ -64,7 +65,7 @@ export const ChatboxAIErrorMessage: FC<ChatboxAIErrorMessageProps> = ({
             }}
           />
         ),
-        OpenMorePlanButton: (
+        OpenMorePlanButton: CHATBOX_COMMERCE_LINKS_ENABLED ? (
           <Link
             component="button"
             type="button"
@@ -80,6 +81,8 @@ export const ChatboxAIErrorMessage: FC<ChatboxAIErrorMessageProps> = ({
               })
             }}
           />
+        ) : (
+          <span />
         ),
         LinkToHomePage: <LinkTargetBlank href="https://chatboxai.app" />,
         LinkToAdvancedFileProcessing: (

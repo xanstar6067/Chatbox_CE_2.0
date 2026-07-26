@@ -24,6 +24,7 @@ vi.mock('@/platform', () => ({
 }))
 
 vi.mock('@/packages/web-search', () => ({
+  getEffectiveSearchProvider: (provider: string) => provider,
   getParseLinkProvider: () => getParseLinkProviderMock(),
   webSearchExecutor: (...args: unknown[]) => webSearchExecutorMock(...args),
 }))
@@ -34,7 +35,10 @@ import { parseLinkTool } from '@/packages/model-calls/toolsets/web-search'
 type ParseLinkInput = { url: string; maxLength?: number }
 
 type ParseLinkToolLike = {
-  execute: (input: ParseLinkInput, context: { abortSignal?: AbortSignal }) => Promise<{
+  execute: (
+    input: ParseLinkInput,
+    context: { abortSignal?: AbortSignal }
+  ) => Promise<{
     url: string
     title: string
     content: string

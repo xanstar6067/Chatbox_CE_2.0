@@ -11,7 +11,7 @@ import type { SessionMetaStorage } from '@/storage/SessionMetaStorage'
 import { SQLiteImageGenerationStorage } from '@/storage/SQLiteImageGenerationStorage'
 import { SQLiteSessionMetaStorage } from '@/storage/SQLiteSessionMetaStorage'
 import { IndexedDBTaskSessionStorage, type TaskSessionStorage } from '@/storage/TaskSessionStorage'
-import { CHATBOX_BUILD_PLATFORM } from '@/variables'
+import { CHATBOX_BUILD_PLATFORM, CHATBOX_COMMERCE_LINKS_ENABLED } from '@/variables'
 import { getBrowser, getOS } from '../packages/navigator'
 import type { Platform, PlatformType } from './interfaces'
 import type { KnowledgeBaseController } from './knowledge-base/interface'
@@ -112,6 +112,13 @@ export default class MobilePlatform extends MobileSQLiteStorage implements Platf
     return () => null
   }
   public async openLink(url: string): Promise<void> {
+    if (
+      !CHATBOX_COMMERCE_LINKS_ENABLED &&
+      /\/redirect_app\/(?:view_more_plans|get_license|claim_free_plan)(?:\/|$)/.test(url)
+    ) {
+      console.warn('Blocked an official Chatbox commerce link in the Android fork')
+      return
+    }
     try {
       // 使用 Browser.open 打开
       // 原生插件不受 JavaScript 用户手势限制，可以在异步调用后正常工作

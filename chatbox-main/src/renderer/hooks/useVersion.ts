@@ -3,7 +3,7 @@ import dayjs from 'dayjs'
 import { useAtomValue } from 'jotai'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { remoteConfigAtom } from '@/stores/atoms'
-import { CHATBOX_BUILD_CHANNEL, CHATBOX_BUILD_PLATFORM } from '@/variables'
+import { CHATBOX_BUILD_CHANNEL, CHATBOX_BUILD_PLATFORM, CHATBOX_OFFICIAL_UPDATE_CHECK_ENABLED } from '@/variables'
 import * as remote from '../packages/remote'
 import platform from '../platform'
 
@@ -42,7 +42,7 @@ export default function useVersion() {
       version &&
       remoteConfig.current_version &&
       compareVersions(version, remoteConfig.current_version) === 1,
-    [version, remoteConfig]
+    [version, remoteConfig, isStoreReviewPlatform]
   )
   const updateCheckTimer = useRef<NodeJS.Timeout>()
   useEffect(() => {
@@ -51,6 +51,9 @@ export default function useVersion() {
       const settings = await platform.getSettings()
       const version = await platform.getVersion()
       _setVersion(version)
+      if (!CHATBOX_OFFICIAL_UPDATE_CHECK_ENABLED) {
+        return
+      }
       try {
         const os = await platform.getPlatform()
         const needUpdate = await remote.checkNeedUpdate(version, os, config, settings)
@@ -59,8 +62,10 @@ export default function useVersion() {
         console.error('Failed to check for updates:', e)
       }
     }
-    handler()
-    updateCheckTimer.current = setInterval(handler, 2 * 60 * 60 * 1000)
+    void handler()
+    if (CHATBOX_OFFICIAL_UPDATE_CHECK_ENABLED) {
+      updateCheckTimer.current = setInterval(handler, 2 * 60 * 60 * 1000)
+    }
     return () => {
       if (updateCheckTimer.current) {
         clearInterval(updateCheckTimer.current)

@@ -1,5 +1,6 @@
 import platform from '@/platform'
 import { authInfoStore } from '@/stores/authInfoStore'
+import { CHATBOX_COMMERCE_LINKS_ENABLED } from '@/variables'
 import { getChatboxOrigin, getWebAuthToken } from './remote'
 
 const DEFAULT_LOCALE = 'en'
@@ -60,6 +61,14 @@ async function openExternalLink(url: string) {
 }
 
 export async function openLinkWithAuth(url: string): Promise<void> {
+  if (
+    !CHATBOX_COMMERCE_LINKS_ENABLED &&
+    /\/redirect_app\/(?:view_more_plans|get_license|claim_free_plan)(?:\/|$)/.test(url)
+  ) {
+    console.warn('Blocked an official Chatbox commerce link in the Android fork')
+    return
+  }
+
   const targetUrl = normalizeTargetUrl(url)
   const tokens = authInfoStore.getState().getTokens()
   const popupRef = platform.type === 'web' ? window.open('about:blank', '_blank') : null

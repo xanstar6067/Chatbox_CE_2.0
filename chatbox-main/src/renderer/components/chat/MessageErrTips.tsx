@@ -13,12 +13,12 @@ import { JK_EVENTS, JK_PAGE_NAMES } from '@/analytics/jk-events'
 import { ChatboxAIErrorMessage } from '@/components/common/ChatboxAIErrorMessage'
 import { useCopied } from '@/hooks/useCopied'
 import { navigateToSettings } from '@/modals/Settings'
-import { trackingEvent } from '@/packages/event'
 import { buildChatboxUrl } from '@/packages/remote'
 import { translateTexts } from '@/packages/translation'
 import platform from '@/platform'
 import * as settingActions from '@/stores/settingActions'
 import { useLanguage, useSettingsStore } from '@/stores/settingsStore'
+import { CHATBOX_COMMERCE_LINKS_ENABLED } from '@/variables'
 import LinkTargetBlank from '../common/Link'
 
 const MAX_CHARS = 200
@@ -261,7 +261,11 @@ export default function MessageErrTips(props: { msg: Message; onRetry?: () => vo
     } else {
       tips.push(
         <Trans
-          i18nKey="Connection to {{aiProvider}} failed. This typically occurs due to incorrect configuration or {{aiProvider}} account issues. Please <buttonOpenSettings>check your settings</buttonOpenSettings> and verify your {{aiProvider}} account status, or purchase a <LinkToLicensePricing>Chatbox AI License</LinkToLicensePricing> to unlock all advanced models instantly without any configuration."
+          i18nKey={
+            CHATBOX_COMMERCE_LINKS_ENABLED
+              ? 'Connection to {{aiProvider}} failed. This typically occurs due to incorrect configuration or {{aiProvider}} account issues. Please <buttonOpenSettings>check your settings</buttonOpenSettings> and verify your {{aiProvider}} account status, or purchase a <LinkToLicensePricing>Chatbox AI License</LinkToLicensePricing> to unlock all advanced models instantly without any configuration.'
+              : 'Connection to {{aiProvider}} failed. This typically occurs due to a temporary service issue. Please try again later or <buttonOpenSettings>check your settings</buttonOpenSettings>.'
+          }
           values={{
             aiProvider: msg.aiProvider
               ? aiProviderNameHash[msg.aiProvider as keyof typeof aiProviderNameHash]

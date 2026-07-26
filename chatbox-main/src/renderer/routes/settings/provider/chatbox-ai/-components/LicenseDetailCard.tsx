@@ -5,10 +5,11 @@ import clsx from 'clsx'
 import { type ReactNode, useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ScalableIcon } from '@/components/common/ScalableIcon'
+import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import { openLinkWithAuth } from '@/packages/openLinkWithAuth'
 import { buildChatboxUrl } from '@/packages/remote'
 import { formatNumber } from '@/utils/format'
-import { useIsSmallScreen } from '@/hooks/useScreenChange'
+import { CHATBOX_COMMERCE_LINKS_ENABLED } from '@/variables'
 
 interface LicenseDetailCardProps {
   licenseDetail: ChatboxAILicenseDetail
@@ -226,9 +227,6 @@ export function LicenseDetailCard({ licenseDetail, language, utmContent }: Licen
 
   const planDetail = licenseDetail.unified_token_usage_details?.find((detail) => detail.type === 'plan')
   const trialDetail = licenseDetail.unified_token_usage_details?.find((detail) => detail.type === 'trial')
-  const invitationDetail = licenseDetail.unified_token_usage_details?.find(
-    (detail) => detail.type === 'invitation_reward'
-  )
   const rewardDetail = licenseDetail.aggregated_reward_details
   const quotaDetail = planDetail?.token_limit ? planDetail : trialDetail
   const isTrialOnly = (planDetail?.token_limit || 0) === 0 && (trialDetail?.token_limit || 0) > 0
@@ -240,10 +238,6 @@ export function LicenseDetailCard({ licenseDetail, language, utmContent }: Licen
     (licenseDetail.expansion_pack_limit || 0) - (licenseDetail.expansion_pack_usage || 0),
     0
   )
-  const invitationRemaining = invitationDetail
-    ? Math.max((invitationDetail.token_limit || 0) - (invitationDetail.token_usage || 0), 0)
-    : 0
-
   const rewardRemaining = rewardDetail
     ? Math.max((rewardDetail.token_limit || 0) - (rewardDetail.token_usage || 0), 0)
     : 0
@@ -276,24 +270,26 @@ export function LicenseDetailCard({ licenseDetail, language, utmContent }: Licen
           <Flex gap="xs" align="center" c="chatbox-primary">
             <ScalableIcon icon={IconAlertTriangle} className="flex-shrink-0" />
             <Text>{t('Your license has expired. You can continue using your expansion pack.')}</Text>
-            <UnstyledButton
-              onClick={() =>
-                void handleOpenAuthLink(
-                  'renew-license',
-                  buildChatboxUrl(
-                    `/redirect_app/manage_license/${language}/?utm_source=app&utm_content=${utmContent}_expired`
+            {CHATBOX_COMMERCE_LINKS_ENABLED && (
+              <UnstyledButton
+                onClick={() =>
+                  void handleOpenAuthLink(
+                    'renew-license',
+                    buildChatboxUrl(
+                      `/redirect_app/manage_license/${language}/?utm_source=app&utm_content=${utmContent}_expired`
+                    )
                   )
-                )
-              }
-              disabled={pendingAction !== null}
-              className="ml-auto flex flex-row items-center gap-xxs"
-              style={{ opacity: pendingAction === 'renew-license' ? 0.6 : 1 }}
-            >
-              <Text span fw={600} className="whitespace-nowrap">
-                {pendingAction === 'renew-license' ? t('Loading...') : t('Renew License')}
-              </Text>
-              <ScalableIcon icon={IconArrowRight} />
-            </UnstyledButton>
+                }
+                disabled={pendingAction !== null}
+                className="ml-auto flex flex-row items-center gap-xxs"
+                style={{ opacity: pendingAction === 'renew-license' ? 0.6 : 1 }}
+              >
+                <Text span fw={600} className="whitespace-nowrap">
+                  {pendingAction === 'renew-license' ? t('Loading...') : t('Renew License')}
+                </Text>
+                <ScalableIcon icon={IconArrowRight} />
+              </UnstyledButton>
+            )}
           </Flex>
         </Alert>
       )}
@@ -334,17 +330,26 @@ export function LicenseDetailCard({ licenseDetail, language, utmContent }: Licen
           remaining={licenseDetail.expansion_pack_limit > 0 ? expansionRemaining : undefined}
           total={licenseDetail.expansion_pack_limit > 0 ? licenseDetail.expansion_pack_limit : undefined}
           mutedValue={licenseDetail.expansion_pack_limit > 0 ? undefined : (t('No Expansion Pack') as string)}
-          actionLabel={(licenseDetail.expansion_pack_limit > 0 ? t('View Details') : t('Buy')) as string}
+          actionLabel={
+            (licenseDetail.expansion_pack_limit > 0
+              ? t('View Details')
+              : CHATBOX_COMMERCE_LINKS_ENABLED
+                ? t('Buy')
+                : undefined) as string | undefined
+          }
           actionLoading={pendingAction === 'view-expansion-pack'}
-          onAction={() =>
-            void handleOpenAuthLink(
-              'view-expansion-pack',
-              buildChatboxUrl(
-                licenseDetail.expansion_pack_limit > 0
-                  ? `/redirect_app/manage_license/${language}/?utm_source=app&utm_content=${utmContent}_expansion`
-                  : `/redirect_app/view_more_plans/${language}/?utm_source=app&utm_content=${utmContent}_expansion`
-              )
-            )
+          onAction={
+            licenseDetail.expansion_pack_limit > 0 || CHATBOX_COMMERCE_LINKS_ENABLED
+              ? () =>
+                  void handleOpenAuthLink(
+                    'view-expansion-pack',
+                    buildChatboxUrl(
+                      licenseDetail.expansion_pack_limit > 0
+                        ? `/redirect_app/manage_license/${language}/?utm_source=app&utm_content=${utmContent}_expansion`
+                        : `/redirect_app/view_more_plans/${language}/?utm_source=app&utm_content=${utmContent}_expansion`
+                    )
+                  )
+              : undefined
           }
           icon={<ExpansionPackIcon />}
         />

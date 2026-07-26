@@ -11,6 +11,7 @@ import platform from '@/platform'
 import icon from '@/static/icon.png'
 import * as premiumActions from '@/stores/premiumActions'
 import { settingsStore } from '@/stores/settingsStore'
+import { CHATBOX_COMMERCE_LINKS_ENABLED } from '@/variables'
 import { EmailCodeLoginModal } from './EmailCodeLoginModal'
 import type { AuthTokens } from './types'
 
@@ -105,46 +106,51 @@ export const LoginView = forwardRef<HTMLDivElement, LoginViewProps>(
             </Stack>
           </Flex>
         </Stack>
-        {/* promote card */}
-        <Paper shadow="xs" p="sm" withBorder>
-          <Stack gap="sm">
-            <Text fw="600" c="chatbox-brand">
-              {t('Chatbox AI offers a user-friendly AI solution to help you enhance productivity')}
-            </Text>
-            <Stack>
-              {[
-                t('Smartest AI-Powered Services for Rapid Access'),
-                t('Vision, Drawing, File Understanding and more'),
-                t('Hassle-free setup'),
-                t('Ideal for work and study'),
-              ].map((item) => (
-                <Flex key={item} gap="xs" align="center">
-                  <ScalableIcon
-                    icon={IconCircleCheckFilled}
-                    className=" flex-shrink-0 flex-grow-0 text-chatbox-tint-brand"
-                  />
-                  <Text>{item}</Text>
-                </Flex>
-              ))}
-            </Stack>
-          </Stack>
-        </Paper>
+        {CHATBOX_COMMERCE_LINKS_ENABLED && (
+          <>
+            {/* promote card */}
+            <Paper shadow="xs" p="sm" withBorder>
+              <Stack gap="sm">
+                <Text fw="600" c="chatbox-brand">
+                  {t('Chatbox AI offers a user-friendly AI solution to help you enhance productivity')}
+                </Text>
+                <Stack>
+                  {[
+                    t('Smartest AI-Powered Services for Rapid Access'),
+                    t('Vision, Drawing, File Understanding and more'),
+                    t('Hassle-free setup'),
+                    t('Ideal for work and study'),
+                  ].map((item) => (
+                    <Flex key={item} gap="xs" align="center">
+                      <ScalableIcon
+                        icon={IconCircleCheckFilled}
+                        className=" flex-shrink-0 flex-grow-0 text-chatbox-tint-brand"
+                      />
+                      <Text>{item}</Text>
+                    </Flex>
+                  ))}
+                </Stack>
+              </Stack>
+            </Paper>
+
+            <Button
+              variant="outline"
+              fullWidth
+              onClick={() => {
+                platform.openLink(
+                  buildChatboxUrl(
+                    `/redirect_app/get_license/${language}?utm_source=app&utm_content=provider_cb_login_get_license`
+                  )
+                )
+                trackingEvent('click_get_license_button', { event_category: 'user' })
+              }}
+            >
+              {t('Get License')}
+            </Button>
+          </>
+        )}
 
         <Flex gap="xs" align="center">
-          <Button
-            variant="outline"
-            flex={1}
-            onClick={() => {
-              platform.openLink(
-                buildChatboxUrl(
-                  `/redirect_app/get_license/${language}?utm_source=app&utm_content=provider_cb_login_get_license`
-                )
-              )
-              trackingEvent('click_get_license_button', { event_category: 'user' })
-            }}
-          >
-            {t('Get License')}
-          </Button>
           <Button
             variant="outline"
             flex={1}

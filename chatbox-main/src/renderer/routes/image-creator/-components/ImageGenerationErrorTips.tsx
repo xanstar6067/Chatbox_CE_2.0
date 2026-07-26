@@ -10,6 +10,7 @@ import { trackingEvent } from '@/packages/event'
 import { buildChatboxUrl } from '@/packages/remote'
 import platform from '@/platform'
 import * as settingActions from '@/stores/settingActions'
+import { CHATBOX_COMMERCE_LINKS_ENABLED } from '@/variables'
 
 export interface ImageGenerationErrorTipsProps {
   record: ImageGeneration
@@ -87,7 +88,7 @@ export function ImageGenerationErrorTips({ record, onRetry, isRetrying }: ImageG
                     onClick={() => navigateToSettings()}
                   />
                 ),
-                OpenMorePlanButton: (
+                OpenMorePlanButton: CHATBOX_COMMERCE_LINKS_ENABLED ? (
                   <Text
                     component="span"
                     className="cursor-pointer underline"
@@ -103,6 +104,8 @@ export function ImageGenerationErrorTips({ record, onRetry, isRetrying }: ImageG
                       })
                     }}
                   />
+                ) : (
+                  <Text component="span" />
                 ),
                 LinkToHomePage: <LinkTargetBlank href="https://chatboxai.app" />,
               }}

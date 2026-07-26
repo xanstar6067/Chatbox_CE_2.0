@@ -14,6 +14,7 @@ import { trackingEvent } from '@/packages/event'
 import { buildChatboxUrl } from '@/packages/remote'
 import platform from '@/platform'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { CHATBOX_COMMERCE_LINKS_ENABLED } from '@/variables'
 import { LicenseDetailCard } from './LicenseDetailCard'
 import { useLicenseActivation } from './useLicenseActivation'
 
@@ -232,18 +233,20 @@ export const LicenseKeyView = forwardRef<HTMLDivElement, LicenseKeyViewProps>(({
                         : t('You have no more Chatbox AI quota left this month.')}
                     </Text>
 
-                    <a
-                      href={buildChatboxUrl(
-                        `/redirect_app/manage_license/${language}/${memorizedManualLicenseKey}?utm_source=app&utm_content=provider_cb_key_no_quota`
-                      )}
-                      target="_blank"
-                      className="ml-auto flex flex-row items-center gap-xxs"
-                    >
-                      <Text span fw={600} className="whitespace-nowrap">
-                        {t('get more')}
-                      </Text>
-                      <ScalableIcon icon={IconArrowRight} />
-                    </a>
+                    {CHATBOX_COMMERCE_LINKS_ENABLED && (
+                      <a
+                        href={buildChatboxUrl(
+                          `/redirect_app/manage_license/${language}/${memorizedManualLicenseKey}?utm_source=app&utm_content=provider_cb_key_no_quota`
+                        )}
+                        target="_blank"
+                        className="ml-auto flex flex-row items-center gap-xxs"
+                      >
+                        <Text span fw={600} className="whitespace-nowrap">
+                          {t('get more')}
+                        </Text>
+                        <ScalableIcon icon={IconArrowRight} />
+                      </a>
+                    )}
                   </Flex>
                 </Alert>
               )}
@@ -263,20 +266,22 @@ export const LicenseKeyView = forwardRef<HTMLDivElement, LicenseKeyViewProps>(({
               >
                 {t('Manage License')}
               </Button>
-              <Button
-                variant="outline"
-                flex={1}
-                onClick={() => {
-                  platform.openLink(
-                    buildChatboxUrl(
-                      `/redirect_app/view_more_plans/${language}?utm_source=app&utm_content=provider_cb_key_more_plans`
+              {CHATBOX_COMMERCE_LINKS_ENABLED && (
+                <Button
+                  variant="outline"
+                  flex={1}
+                  onClick={() => {
+                    platform.openLink(
+                      buildChatboxUrl(
+                        `/redirect_app/view_more_plans/${language}?utm_source=app&utm_content=provider_cb_key_more_plans`
+                      )
                     )
-                  )
-                  trackingEvent('click_view_more_plans_button', { event_category: 'user' })
-                }}
-              >
-                {t('View More Plans')}
-              </Button>
+                    trackingEvent('click_view_more_plans_button', { event_category: 'user' })
+                  }}
+                >
+                  {t('View More Plans')}
+                </Button>
+              )}
             </Flex>
           </>
         ) : (
@@ -307,20 +312,22 @@ export const LicenseKeyView = forwardRef<HTMLDivElement, LicenseKeyViewProps>(({
             </Paper>
 
             <Flex gap="xs" align="center">
-              <Button
-                variant="outline"
-                flex={1}
-                onClick={() => {
-                  platform.openLink(
-                    buildChatboxUrl(
-                      `/redirect_app/get_license/${language}?utm_source=app&utm_content=provider_cb_key_get_license`
+              {CHATBOX_COMMERCE_LINKS_ENABLED && (
+                <Button
+                  variant="outline"
+                  flex={1}
+                  onClick={() => {
+                    platform.openLink(
+                      buildChatboxUrl(
+                        `/redirect_app/get_license/${language}?utm_source=app&utm_content=provider_cb_key_get_license`
+                      )
                     )
-                  )
-                  trackingEvent('click_get_license_button', { event_category: 'user' })
-                }}
-              >
-                {t('Get License')}
-              </Button>
+                    trackingEvent('click_get_license_button', { event_category: 'user' })
+                  }}
+                >
+                  {t('Get License')}
+                </Button>
+              )}
               <Button
                 variant="outline"
                 flex={1}

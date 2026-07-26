@@ -17,6 +17,7 @@ import { EmailCodeLoginModal } from '@/routes/settings/provider/chatbox-ai/-comp
 import { authInfoStore } from '@/stores/authInfoStore'
 import * as premiumActions from '@/stores/premiumActions'
 import { settingsStore, useLanguage } from '@/stores/settingsStore'
+import { CHATBOX_COMMERCE_LINKS_ENABLED } from '@/variables'
 
 interface LoginButtonProps {
   onLoginSuccess: () => void
@@ -309,6 +310,10 @@ export function FreeTrialLink({ onAfterClick }: FreeTrialLinkProps = {}) {
       setPendingExternalAction(false)
     }
   }, [language, onAfterClick])
+
+  if (!CHATBOX_COMMERCE_LINKS_ENABLED) {
+    return null
+  }
 
   return (
     <Flex mt="md">

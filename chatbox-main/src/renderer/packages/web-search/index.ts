@@ -3,6 +3,7 @@ import type { SearchResultItem } from '@shared/types'
 import { truncate } from 'lodash'
 import platform from '@/platform'
 import { getExtensionSettings, getLanguage, getLicenseKey } from '@/stores/settingActions'
+import { CHATBOX_BUILT_IN_WEB_SEARCH_ENABLED } from '@/variables'
 import { ChatboxAIAPIError } from '../../../shared/models/errors'
 import type WebSearch from './base'
 import { BingSearch } from './bing'
@@ -14,13 +15,20 @@ import { TavilySearch } from './tavily'
 
 const MAX_CONTEXT_ITEMS = 10
 
+export function getEffectiveSearchProvider(provider: string): string {
+  if (!CHATBOX_BUILT_IN_WEB_SEARCH_ENABLED && provider === 'build-in') {
+    return 'bing'
+  }
+  return provider
+}
+
 // 根据配置的搜索提供方来选择搜索服务
 function getSearchProviders() {
   const settings = getExtensionSettings()
   const licenseKey = getLicenseKey()
 
   const selectedProviders: WebSearch[] = []
-  const provider = settings.webSearch.provider
+  const provider = getEffectiveSearchProvider(settings.webSearch.provider)
   const language = getLanguage()
 
   switch (provider) {
@@ -131,7 +139,9 @@ export const webSearchExecutor = async (
  * Single source of truth: which configured providers offer the parse_link tool.
  * Keep in sync with the provider classes' `supportsParseLink` flags.
  */
-export const PROVIDERS_WITH_PARSE_LINK: ReadonlySet<string> = new Set(['build-in', 'tavily'])
+export const PROVIDERS_WITH_PARSE_LINK: ReadonlySet<string> = new Set(
+  CHATBOX_BUILT_IN_WEB_SEARCH_ENABLED ? ['build-in', 'tavily'] : ['tavily']
+)
 
 /**
  * Returns the first configured search provider that supports parseLink.

@@ -12,6 +12,7 @@ import { immer } from 'zustand/middleware/immer'
 import { getLogger } from '@/lib/utils'
 import platform from '@/platform'
 import storage from '@/storage'
+import { CHATBOX_BUILT_IN_WEB_SEARCH_ENABLED } from '@/variables'
 import { mergeProviderSettings, type ProviderSettingsUpdate } from './providerSettings'
 
 const log = getLogger('settings-store')
@@ -25,6 +26,22 @@ export function getPlatformDefaultDocumentParser(): DocumentParserConfig {
   return platform.type === 'desktop' ? { type: 'local' } : { type: 'none' }
 }
 
+function applyBuildSpecificSettings(settings: Settings): Settings {
+  if (!CHATBOX_BUILT_IN_WEB_SEARCH_ENABLED && settings.extension.webSearch.provider === 'build-in') {
+    return {
+      ...settings,
+      extension: {
+        ...settings.extension,
+        webSearch: {
+          ...settings.extension.webSearch,
+          provider: 'bing',
+        },
+      },
+    }
+  }
+  return settings
+}
+
 type Action = {
   setSettings: (nextStateOrUpdater: Partial<Settings> | ((state: WritableDraft<Settings>) => void)) => void
   getSettings: () => Settings
@@ -34,7 +51,7 @@ export const settingsStore = createStore<Settings & Action>()(
   subscribeWithSelector(
     persist(
       immer((set, get) => ({
-        ...SettingsSchema.parse(defaults.settings()),
+        ...applyBuildSpecificSettings(SettingsSchema.parse(defaults.settings())),
         setSettings: (val) => set(val),
         getSettings: () => {
           const store = get()
@@ -115,7 +132,7 @@ export const settingsStore = createStore<Settings & Action>()(
             }
           }
 
-          return SettingsSchema.parse(settings)
+          return applyBuildSpecificSettings(SettingsSchema.parse(settings))
         },
         skipHydration: true,
       }
@@ -128,6 +145,9 @@ export const initSettingsStore = async () => {
   if (!_initSettingsStorePromise) {
     _initSettingsStorePromise = new Promise<Settings>((resolve) => {
       const unsub = settingsStore.persist.onFinishHydration((val) => {
+        if (val && !CHATBOX_BUILT_IN_WEB_SEARCH_ENABLED && val.extension.webSearch.provider === 'build-in') {
+          settingsStore.setState(applyBuildSpecificSettings(SettingsSchema.parse(val)))
+        }
         const providers = val?.providers
         const providersCount =
           providers && typeof providers === 'object' && !Array.isArray(providers) ? Object.keys(providers).length : 0
@@ -135,7 +155,7 @@ export const initSettingsStore = async () => {
           log.info(`[CONFIG_DEBUG] onFinishHydration: providersCount=0`)
         }
         unsub()
-        resolve(val)
+        resolve(settingsStore.getState())
       })
       settingsStore.persist.rehydrate()
     })

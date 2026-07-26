@@ -8,6 +8,7 @@ import { openLinkWithAuth } from '@/packages/openLinkWithAuth'
 import * as remote from '@/packages/remote'
 import { useLanguage } from '@/stores/settingsStore'
 import type { HomeWelcomeCardMode } from '@/utils/homeWelcomeCard'
+import { CHATBOX_COMMERCE_LINKS_ENABLED } from '@/variables'
 
 export function ChatboxWelcomeCard(props: { mode: HomeWelcomeCardMode; pageName: string; className?: string }) {
   const { mode, pageName, className } = props
@@ -18,7 +19,7 @@ export function ChatboxWelcomeCard(props: { mode: HomeWelcomeCardMode; pageName:
   )
   const pendingActionRef = useRef(false)
 
-  if (mode === 'none') {
+  if (mode === 'none' || !CHATBOX_COMMERCE_LINKS_ENABLED) {
     return null
   }
 

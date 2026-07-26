@@ -17,15 +17,15 @@ import {
   IconChevronRight,
   IconClipboard,
   IconFileText,
+  IconGitFork,
   IconHome,
   IconMail,
   IconMessage2,
   IconPencil,
   IconRefresh,
-  IconX,
 } from '@tabler/icons-react'
 import { createFileRoute } from '@tanstack/react-router'
-import { Fragment, type ReactElement, useState } from 'react'
+import { Fragment, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ScalableIcon } from '@/components/common/ScalableIcon'
 import BrandGithub from '@/components/icons/BrandGithub'
@@ -40,6 +40,7 @@ import iconPNG from '@/static/icon.png'
 import IMG_WECHAT_QRCODE from '@/static/wechat_qrcode.png'
 import { useLanguage } from '@/stores/settingsStore'
 import { installUpdate, useUpdateStore } from '@/stores/updateStore'
+import { IS_ANDROID_FORK_BUILD } from '@/variables'
 
 export const Route = createFileRoute('/about')({
   component: RouteComponent,
@@ -50,6 +51,10 @@ function RouteComponent() {
   const version = useVersion()
   const language = useLanguage()
   const isSmallScreen = useIsSmallScreen()
+
+  if (IS_ANDROID_FORK_BUILD) {
+    return <AndroidForkAbout version={version.version} isSmallScreen={isSmallScreen} />
+  }
 
   return (
     <Page title={t('About')}>
@@ -152,6 +157,50 @@ function RouteComponent() {
   )
 }
 
+function AndroidForkAbout({ version, isSmallScreen }: { version: string; isSmallScreen: boolean }) {
+  const { t } = useTranslation()
+
+  return (
+    <Page title={t('About')}>
+      <Container size="md" p={0}>
+        <Stack gap="xl" px={isSmallScreen ? 'sm' : 'md'} py={isSmallScreen ? 'xl' : 'md'}>
+          <Flex gap="xl" p="md" align="center" className="rounded-lg bg-chatbox-background-secondary">
+            <Image h={88} w={88} mah="20vw" maw="20vw" src={iconPNG} />
+            <Stack flex={1} gap="xxs">
+              <Title order={4}>Chatbox CE {/\d/.test(version) ? `(v${version})` : ''}</Title>
+              <Flex gap="xs" align="center" c="chatbox-brand">
+                <ScalableIcon icon={IconGitFork} size={18} />
+                <Text fw={600}>{t('Independent community fork')}</Text>
+              </Flex>
+            </Stack>
+          </Flex>
+
+          <Stack gap="sm" p="md" className="rounded-lg bg-chatbox-background-secondary">
+            <Text>{t('This application is a fork of the official Chatbox application.')}</Text>
+            <Text c="chatbox-tertiary">
+              {t(
+                'This is an independent community build. It is not an official release and is not affiliated with or endorsed by the Chatbox team.'
+              )}
+            </Text>
+          </Stack>
+
+          <List>
+            {[
+              <ListItem
+                key="official-source"
+                icon={<BrandGithub className="w-full h-full" />}
+                title={t('Official source project')}
+                link="https://github.com/chatboxai/chatbox"
+                value="chatboxai/chatbox"
+              />,
+            ]}
+          </List>
+        </Stack>
+      </Container>
+    </Page>
+  )
+}
+
 /**
  * Update section in the About page hero.
  * Desktop: check button, progress bar, error/retry, restart & install.
@@ -204,8 +253,6 @@ function DesktopUpdateSection() {
   const status = useUpdateStore((s) => s.status)
   const progress = useUpdateStore((s) => s.progress)
   const updateVersion = useUpdateStore((s) => s.version)
-  const error = useUpdateStore((s) => s.error)
-
   const handleCheck = async () => {
     useUpdateStore.setState({ status: 'checking', error: null })
     try {

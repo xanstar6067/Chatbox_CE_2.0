@@ -10,6 +10,13 @@ export const CHATBOX_BUILD_PLATFORM = (process.env.CHATBOX_BUILD_PLATFORM || 'un
 
 export const CHATBOX_BUILD_CHANNEL = (process.env.CHATBOX_BUILD_CHANNEL || 'unknown') as 'unknown' | 'google_play'
 
+// The Android Community Edition is an independent fork. Keep integrations that
+// point users back to the official commercial product out of that build.
+export const IS_ANDROID_FORK_BUILD = CHATBOX_BUILD_PLATFORM === 'android'
+export const CHATBOX_OFFICIAL_UPDATE_CHECK_ENABLED = !IS_ANDROID_FORK_BUILD
+export const CHATBOX_COMMERCE_LINKS_ENABLED = !IS_ANDROID_FORK_BUILD
+export const CHATBOX_BUILT_IN_WEB_SEARCH_ENABLED = !IS_ANDROID_FORK_BUILD
+
 // api.chatboxai.app
 export const USE_LOCAL_API = process.env.USE_LOCAL_API || ''
 export const USE_BETA_API = process.env.USE_BETA_API || ''

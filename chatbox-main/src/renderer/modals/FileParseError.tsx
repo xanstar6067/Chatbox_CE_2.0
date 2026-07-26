@@ -18,6 +18,7 @@ import {
   SESSION_ATTACHMENT_RAG_REQUIRES_TOOL_USE_MODEL_ERROR,
 } from '@/stores/sessionHelpers'
 import * as settingActions from '@/stores/settingActions'
+import { CHATBOX_COMMERCE_LINKS_ENABLED } from '@/variables'
 
 interface FileParseErrorProps {
   errorCode: string
@@ -96,7 +97,7 @@ const FileParseError = NiceModal.create(({ errorCode, fileName }: FileParseError
         components={{
           OpenSettingButton: <span />,
           OpenExtensionSettingButton: <span />,
-          OpenMorePlanButton: (
+          OpenMorePlanButton: CHATBOX_COMMERCE_LINKS_ENABLED ? (
             <a
               className="cursor-pointer underline font-semibold text-blue-600 hover:text-blue-700"
               onClick={() => {
@@ -110,6 +111,8 @@ const FileParseError = NiceModal.create(({ errorCode, fileName }: FileParseError
                 })
               }}
             />
+          ) : (
+            <span />
           ),
           OpenDocumentParserSettingButton: (
             <a

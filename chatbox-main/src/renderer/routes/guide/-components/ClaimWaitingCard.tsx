@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next'
 import { openLinkWithAuth } from '@/packages/openLinkWithAuth'
 import { buildChatboxUrl, type UserLicense } from '@/packages/remote'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { CHATBOX_COMMERCE_LINKS_ENABLED } from '@/variables'
 import { useClaimPolling } from '../-hooks/useClaimPolling'
 
 interface ClaimWaitingCardProps {
@@ -32,7 +33,7 @@ export function ClaimWaitingCard({ onClaimDetected }: ClaimWaitingCardProps) {
   const [timedOut, setTimedOut] = useState(false)
 
   useClaimPolling({
-    enabled: !hasLicense && !timedOut,
+    enabled: CHATBOX_COMMERCE_LINKS_ENABLED && !hasLicense && !timedOut,
     onClaimed: onClaimDetected,
     onTimeout: () => setTimedOut(true),
   })
@@ -45,6 +46,14 @@ export function ClaimWaitingCard({ onClaimDetected }: ClaimWaitingCardProps) {
     void openLinkWithAuth(buildClaimUrl(language)).catch((err) => {
       console.warn('[guide] reopen claim page failed:', err)
     })
+  }
+
+  if (!CHATBOX_COMMERCE_LINKS_ENABLED) {
+    return (
+      <Anchor size="sm" component="button" type="button" onClick={handleSkip}>
+        {t('Skip for now')}
+      </Anchor>
+    )
   }
 
   if (timedOut) {

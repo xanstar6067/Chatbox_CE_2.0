@@ -2,7 +2,7 @@ import { ChatboxAIAPIError } from '@shared/models/errors'
 import { tool } from 'ai'
 import z from 'zod'
 import * as remote from '@/packages/remote'
-import { getParseLinkProvider, webSearchExecutor } from '@/packages/web-search'
+import { getEffectiveSearchProvider, getParseLinkProvider, webSearchExecutor } from '@/packages/web-search'
 import platform from '@/platform'
 import * as settingActions from '@/stores/settingActions'
 
@@ -52,7 +52,7 @@ export const parseLinkTool = tool({
     const maxLength = input.maxLength ?? DEFAULT_PARSE_LINK_MAX_CHARS
     const normalizedMaxLength = Math.min(Math.max(maxLength, 500), 50_000)
 
-    const searchProvider = settingActions.getExtensionSettings().webSearch.provider
+    const searchProvider = getEffectiveSearchProvider(settingActions.getExtensionSettings().webSearch.provider)
 
     // Chatbox AI (build-in) path: requires a license key (any tier — backend has no Pro gate).
     if (searchProvider === 'build-in') {
