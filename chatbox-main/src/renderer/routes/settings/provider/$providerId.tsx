@@ -85,6 +85,8 @@ const BUILTIN_API_HOST_PROVIDERS = new Set<string>([
   ModelProviderEnum.MoonshotCN,
   ModelProviderEnum.Ollama,
   ModelProviderEnum.LMStudio,
+  ModelProviderEnum.Groq,
+  ModelProviderEnum.XAI,
   ModelProviderEnum.VercelAIGateway,
 ])
 

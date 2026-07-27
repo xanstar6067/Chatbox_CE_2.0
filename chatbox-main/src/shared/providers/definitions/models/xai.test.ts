@@ -37,10 +37,11 @@ function createDependencies(): ModelDependencies {
   }
 }
 
-function createModel(model: ProviderModelInfo) {
+function createModel(model: ProviderModelInfo, apiHost = 'https://api.x.ai') {
   return new TestXAI(
     {
       apiKey: 'xai-test-key',
+      apiHost,
       model,
       temperature: 0.7,
       topP: 0.9,
@@ -118,5 +119,22 @@ describe('XAI', () => {
     expect(apiRequest).toHaveBeenCalledTimes(1)
     expect(result).toEqual(['data:image/jpeg;base64,AQID'])
     expect(callback).toHaveBeenCalledWith('data:image/jpeg;base64,AQID')
+  })
+
+  it('uses a custom API host for Grok image requests', async () => {
+    apiRequest.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          data: [{ b64_json: 'AQID', mime_type: 'image/png' }],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      )
+    )
+
+    const model = createModel({ modelId: 'grok-imagine-image', type: 'image' }, 'https://proxy.example.com/xai')
+    await model.paint({ prompt: 'A cat astronaut', num: 1 })
+
+    expect(model.options.apiHost).toBe('https://proxy.example.com/xai/v1')
+    expect(apiRequest.mock.calls[0][0].url).toBe('https://proxy.example.com/xai/v1/images/generations')
   })
 })

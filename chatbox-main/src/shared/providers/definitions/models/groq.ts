@@ -1,13 +1,14 @@
 import OpenAICompatible, { type OpenAICompatibleSettings } from '../../../models/openai-compatible'
 import type { ModelDependencies } from '../../../types/adapters'
+import { normalizeOpenAIApiHostAndPath } from '../../../utils'
 
 interface Options extends OpenAICompatibleSettings {}
 
 export default class Groq extends OpenAICompatible {
   public name = 'Groq'
   public options: Options
-  constructor(options: Omit<Options, 'apiHost'>, dependencies: ModelDependencies) {
-    const apiHost = 'https://api.groq.com/openai/v1'
+  constructor(options: Options, dependencies: ModelDependencies) {
+    const { apiHost } = normalizeOpenAIApiHostAndPath({ apiHost: options.apiHost })
     super(
       {
         apiKey: options.apiKey,

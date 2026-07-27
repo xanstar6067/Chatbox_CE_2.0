@@ -6,6 +6,7 @@ import OpenAICompatible, { type OpenAICompatibleSettings } from '../../../models
 import type { CallChatCompletionOptions, NativeWebSearchConfig } from '../../../models/types'
 import { createFetchWithProxy } from '../../../models/utils/fetch-proxy'
 import type { ModelDependencies } from '../../../types/adapters'
+import { normalizeOpenAIApiHostAndPath } from '../../../utils'
 
 interface Options extends OpenAICompatibleSettings {}
 
@@ -26,8 +27,8 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 export default class XAI extends OpenAICompatible {
   public name = 'xAI'
   public options: Options
-  constructor(options: Omit<Options, 'apiHost'>, dependencies: ModelDependencies) {
-    const apiHost = 'https://api.x.ai/v1'
+  constructor(options: Options, dependencies: ModelDependencies) {
+    const { apiHost } = normalizeOpenAIApiHostAndPath({ apiHost: options.apiHost })
     super(
       {
         apiKey: options.apiKey,

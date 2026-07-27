@@ -1,6 +1,6 @@
 import { Box, Flex } from '@mantine/core'
 import { SystemProviders } from '@shared/defaults'
-import type { ModelProviderEnum, ProviderInfo, ProviderSettings } from '@shared/types'
+import { ModelProviderEnum, type ProviderInfo, type ProviderSettings } from '@shared/types'
 import { createFileRoute, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -39,12 +39,11 @@ export function RouteComponent() {
 
   const providers = useMemo<ProviderInfo[]>(() => {
     const systemProviders = SystemProviders().filter(
-      (p) => !(isExceeded && p.name.toLocaleLowerCase().match(/openai|claude|gemini/i))
+      (p) =>
+        p.id !== ModelProviderEnum.ChatboxAI &&
+        !(isExceeded && p.name.toLocaleLowerCase().match(/openai|claude|gemini/i))
     )
-    // Put ChatboxAI first
-    const chatboxAI = systemProviders.find((p) => p.id === 'chatbox-ai')
-    const others = systemProviders.filter((p) => p.id !== 'chatbox-ai')
-    return [...(chatboxAI ? [chatboxAI] : []), ...others, ...(customProviders || [])].map((p) => ({
+    return [...systemProviders, ...(customProviders || [])].map((p) => ({
       ...p,
       ...(providersMap?.[p.id] || {}),
     }))
