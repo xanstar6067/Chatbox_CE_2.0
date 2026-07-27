@@ -124,7 +124,7 @@ export function RouteComponent() {
       <Text size="xs" c="chatbox-gray" maw={520}>
         {extension.webSearch.mode === 'auto'
           ? t(
-              'Gemini uses Google Search and Grok uses xAI Search. Other models use the fallback provider selected below.'
+              'Gemini uses Google Search, Grok uses xAI Search, and OpenRouter uses OpenRouter Search. Other models use the fallback provider selected below.'
             )
           : t('All models use the selected search provider.')}
       </Text>

@@ -2,7 +2,7 @@
   "All models use the selected search provider.": "Все модели используют выбранный поисковый сервис.",
   "Automatic by model": "Автоматически по модели",
   "Fallback Search Provider": "Резервный поисковый сервис",
-  "Gemini uses Google Search and Grok uses xAI Search. Other models use the fallback provider selected below.": "Gemini использует Google Search, а Grok — xAI Search. Для остальных моделей используется выбранный ниже резервный сервис.",
+  "Gemini uses Google Search, Grok uses xAI Search, and OpenRouter uses OpenRouter Search. Other models use the fallback provider selected below.": "Gemini использует Google Search, Grok — xAI Search, а OpenRouter — OpenRouter Search. Для остальных моделей используется выбранный ниже резервный сервис.",
   "One provider for all models": "Один сервис для всех моделей",
   "Search Mode": "Режим поиска",
   " for free now!": "бесплатно прямо сейчас!",
