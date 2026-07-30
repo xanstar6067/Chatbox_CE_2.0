@@ -141,12 +141,24 @@ export const GlobalSessionSettingsSchema = z.object({
   stream: z.boolean().optional().catch(true),
 })
 
+export const MessageRefinementModelSchema = z.object({
+  provider: z.string(),
+  modelId: z.string(),
+})
+
 export const SessionSettingsSchema = GlobalSessionSettingsSchema.extend({
   provider: z.string().optional().catch(undefined),
   modelId: z.string().optional().catch(undefined),
   dalleStyle: z.enum(['vivid', 'natural']).optional().catch('vivid'),
   imageGenerateNum: z.number().optional().catch(1),
   providerOptions: ProviderOptionsSchema.optional().catch(undefined),
+  messageRefinementModels: z
+    .object({
+      cleanup: MessageRefinementModelSchema.optional().catch(undefined),
+      proofread: MessageRefinementModelSchema.optional().catch(undefined),
+    })
+    .optional()
+    .catch(undefined),
 })
 
 export const CompactionPromptSchema = z.object({

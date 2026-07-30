@@ -9,13 +9,14 @@ import {
   IconCode,
   IconCopy,
   IconDotsVertical,
+  IconEraser,
   IconInfoCircle,
-  IconMessageReport,
   IconPencil,
   IconPhotoPlus,
   type IconProps,
   IconQuoteFilled,
   IconReload,
+  IconTextSpellcheck,
   IconTrash,
 } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
@@ -106,6 +107,9 @@ const _Message: FC<Props> = (props) => {
   const contentLength = useMemo(() => {
     return getMessageText(msg).length
   }, [msg])
+  const hasRefinableText = useMemo(() => {
+    return getMessageText(msg, false, false).trim().length > 0
+  }, [msg])
 
   const needCollapse =
     collapseThreshold &&
@@ -156,10 +160,6 @@ const _Message: FC<Props> = (props) => {
       }
     }
 
-  const onReport = useCallback(async () => {
-    await NiceModal.show('report-content', { contentId: getMessageText(msg) || msg.id })
-  }, [msg])
-
   const onDelMsg = useCallback(() => {
     removeMessage(sessionId, msg.id)
   }, [msg.id, sessionId])
@@ -167,6 +167,13 @@ const _Message: FC<Props> = (props) => {
   const onEditClick = useCallback(async () => {
     await NiceModal.show('message-edit', { sessionId, msg: msg })
   }, [msg, sessionId])
+
+  const onRefineMessage = useCallback(
+    (kind: 'cleanup' | 'proofread') => {
+      void NiceModal.show('message-refinement', { sessionId, msg, kind })
+    },
+    [msg, sessionId]
+  )
 
   // for testing: manual trigger error
   const onTriggerError = useCallback(() => {
@@ -331,16 +338,21 @@ const _Message: FC<Props> = (props) => {
         icon: IconQuoteFilled,
         onClick: quoteMsg,
       },
-      { divider: true },
-      ...(msg.role === 'assistant' && platform.type === 'mobile'
+      ...(!msg.generating && props.sessionType !== 'picture' && hasRefinableText
         ? [
             {
-              text: t('report'),
-              icon: IconMessageReport,
-              onClick: onReport,
+              text: t('Clean up text'),
+              icon: IconEraser,
+              onClick: () => onRefineMessage('cleanup'),
+            },
+            {
+              text: t('Proofread text'),
+              icon: IconTextSpellcheck,
+              onClick: () => onRefineMessage('proofread'),
             },
           ]
         : []),
+      { divider: true },
       // 开发环境添加测试错误按钮
       ...(process.env.NODE_ENV === 'development'
         ? [
@@ -366,8 +378,8 @@ const _Message: FC<Props> = (props) => {
     [
       t,
       msg.role,
-      onReport,
       quoteMsg,
+      onRefineMessage,
       onDelMsg,
       onViewMessageJson,
       isSmallScreen,
@@ -377,6 +389,7 @@ const _Message: FC<Props> = (props) => {
       onEditClick,
       onCopyMsg,
       msg.model,
+      hasRefinableText,
       props.sessionType,
     ]
   )
@@ -511,10 +524,7 @@ const _Message: FC<Props> = (props) => {
           )}
         </Box>
         {props.sessionType === 'picture' && contentParts.filter((p) => p.type === 'image').length > 0 && (
-          <PictureGallery
-            pictures={contentParts.filter((p) => p.type === 'image')}
-            onReport={platform.type === 'mobile' ? onReport : undefined}
-          />
+          <PictureGallery pictures={contentParts.filter((p) => p.type === 'image')} />
         )}
         <MessageErrTips
           msg={msg}

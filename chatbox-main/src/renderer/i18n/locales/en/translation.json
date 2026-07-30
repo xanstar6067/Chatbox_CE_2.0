@@ -1004,5 +1004,20 @@
   "Your license has expired.": "Your license has expired.",
   "Your license has expired. Please check your subscription or purchase a new one.": "Your license has expired. Please check your subscription or purchase a new one.",
   "Your license has expired. You can continue using your expansion pack.": "Your license has expired. You can continue using your expansion pack.",
-  "Your rating on the App Store would help make Chatbox even better!": "Your rating on the App Store would help make Chatbox even better!"
+  "Your rating on the App Store would help make Chatbox even better!": "Your rating on the App Store would help make Chatbox even better!",
+  "Apply": "Apply",
+  "Clean up text": "Clean up text",
+  "Correction failed": "Correction failed",
+  "Editing model": "Editing model",
+  "For example: “replace Ritsko with Ritsuko” or “make Misato’s car blue”.": "For example: “replace Ritsko with Ritsuko” or “make Misato’s car blue”.",
+  "Leave empty for automatic correction": "Leave empty for automatic correction",
+  "Only this message is sent to the selected model; chat history is not included.": "Only this message is sent to the selected model; chat history is not included.",
+  "Optional editing instruction": "Optional editing instruction",
+  "Proofread text": "Proofread text",
+  "Result preview": "Result preview",
+  "Run correction": "Run correction",
+  "Run the correction to see and edit the result here.": "Run the correction to see and edit the result here.",
+  "The model is correcting the text…": "The model is correcting the text…",
+  "This choice is saved for this tool in this chat and does not change the chat model.": "This choice is saved for this tool in this chat and does not change the chat model.",
+  "Try again": "Try again"
 }

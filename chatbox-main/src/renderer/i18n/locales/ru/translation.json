@@ -1004,5 +1004,20 @@
   "Your license has expired.": "Ваша лицензия истекла.",
   "Your license has expired. Please check your subscription or purchase a new one.": "Ваша лицензия истекла. Пожалуйста, проверьте подписку или приобретите новую.",
   "Your license has expired. You can continue using your expansion pack.": "Ваша лицензия истекла. Вы можете продолжать использовать ваш пакет расширения.",
-  "Your rating on the App Store would help make Chatbox even better!": "Ваш рейтинг в App Store поможет сделать Chatbox еще лучше!"
+  "Your rating on the App Store would help make Chatbox even better!": "Ваш рейтинг в App Store поможет сделать Chatbox еще лучше!",
+  "Apply": "Применить",
+  "Clean up text": "Очистить текст",
+  "Correction failed": "Не удалось исправить текст",
+  "Editing model": "Модель для исправления",
+  "For example: “replace Ritsko with Ritsuko” or “make Misato’s car blue”.": "Например: «замени Рицко на Рицуко» или «пусть машина Мисато будет синей».",
+  "Leave empty for automatic correction": "Оставьте пустым для автоматического исправления",
+  "Only this message is sent to the selected model; chat history is not included.": "Выбранной модели отправляется только это сообщение — без истории чата.",
+  "Optional editing instruction": "Дополнительная инструкция",
+  "Proofread text": "Проверить текст",
+  "Result preview": "Предпросмотр результата",
+  "Run correction": "Запустить",
+  "Run the correction to see and edit the result here.": "Запустите исправление — результат можно будет проверить и отредактировать здесь.",
+  "The model is correcting the text…": "Модель исправляет текст…",
+  "This choice is saved for this tool in this chat and does not change the chat model.": "Выбор сохранится для этого инструмента в текущем чате и не изменит основную модель.",
+  "Try again": "Попробовать ещё раз"
 }
