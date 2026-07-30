@@ -104,6 +104,7 @@ function MessageRefinementModal({
     abortControllerRef.current = controller
     setIsRunning(true)
     setError('')
+    setPreview('')
 
     try {
       const result = await refineMessageText({
@@ -114,6 +115,11 @@ function MessageRefinementModal({
         modelSelection: selectedModel,
         sessionSettings,
         signal: controller.signal,
+        onTextChange: (text) => {
+          if (!controller.signal.aborted) {
+            setPreview(text)
+          }
+        },
       })
       if (!controller.signal.aborted) {
         setPreview(result)

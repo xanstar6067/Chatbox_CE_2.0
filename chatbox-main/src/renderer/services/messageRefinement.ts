@@ -82,6 +82,7 @@ export async function refineMessageText({
   modelSelection,
   sessionSettings,
   signal,
+  onTextChange,
 }: {
   sessionId: string
   message: Message
@@ -90,6 +91,7 @@ export async function refineMessageText({
   modelSelection: { provider: string; modelId: string }
   sessionSettings: SessionSettings
   signal?: AbortSignal
+  onTextChange?: (text: string) => void
 }): Promise<string> {
   const sourceText = getMessageText(message, false, false).trim()
   if (!sourceText) {
@@ -101,16 +103,27 @@ export async function refineMessageText({
     provider: modelSelection.provider,
     modelId: modelSelection.modelId,
     temperature: 0.1,
-    stream: false,
+    stream: true,
     providerOptions: undefined,
   }
   const model = await createModel(selectedModelSettings)
   const messages = buildMessageRefinementMessages(kind, sourceText, userInstruction, model.isSupportSystemMessage())
-  const result = await model.chat(messages, {
+  const stream = model.chatStream(messages, {
     sessionId,
     signal,
   })
-  const refinedText = getRefinedText(result)
+  let streamedText = ''
+
+  for await (const chunk of stream) {
+    if (chunk.type === 'text-delta') {
+      streamedText += chunk.text
+      onTextChange?.(streamedText)
+    } else if (chunk.type === 'error') {
+      throw chunk.error instanceof Error ? chunk.error : new Error(String(chunk.error))
+    }
+  }
+
+  const refinedText = streamedText.trim()
 
   if (!refinedText) {
     throw new Error('The model returned an empty result.')

@@ -1,11 +1,17 @@
-import type { MessageContentParts } from '@shared/types'
-import { describe, expect, it } from 'vitest'
+import type { Message, MessageContentParts, SessionSettings } from '@shared/types'
+import { describe, expect, it, vi } from 'vitest'
+import { createModel } from '@/adapters'
 import {
   buildMessageRefinementInstruction,
   buildMessageRefinementMessages,
   getRefinedText,
+  refineMessageText,
   replaceMessageTextParts,
 } from './messageRefinement'
+
+vi.mock('@/adapters', () => ({
+  createModel: vi.fn(),
+}))
 
 describe('messageRefinement', () => {
   it('builds a cleanup request that separates instructions from message text', () => {
@@ -70,5 +76,35 @@ describe('messageRefinement', () => {
         ],
       })
     ).toBe('corrected\ntext')
+  })
+
+  it('streams the corrected text into the preview callback', async () => {
+    const chatStream = vi.fn(function* () {
+      yield { type: 'text-delta', id: 'text-1', text: '  corrected' }
+      yield { type: 'text-delta', id: 'text-1', text: ' text  ' }
+    })
+    vi.mocked(createModel).mockResolvedValue({
+      isSupportSystemMessage: () => true,
+      chatStream,
+    } as never)
+    const updates: string[] = []
+
+    const result = await refineMessageText({
+      sessionId: 'session-1',
+      message: {
+        id: 'message-1',
+        role: 'assistant',
+        contentParts: [{ type: 'text', text: 'source text' }],
+      } as Message,
+      kind: 'cleanup',
+      userInstruction: '',
+      modelSelection: { provider: 'provider-1', modelId: 'model-1' },
+      sessionSettings: { provider: 'chat-provider', modelId: 'chat-model' } as SessionSettings,
+      onTextChange: (text) => updates.push(text),
+    })
+
+    expect(result).toBe('corrected text')
+    expect(updates).toEqual(['  corrected', '  corrected text  '])
+    expect(chatStream).toHaveBeenCalledOnce()
   })
 })
