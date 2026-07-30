@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { AdaptiveSelect } from '@/components/AdaptiveSelect'
 import platform from '@/platform'
 import { getPlatformDefaultDocumentParser, useSettingsStore } from '@/stores/settingsStore'
+import { CHATBOX_AI_DOCUMENT_PARSER_ENABLED } from '@/variables'
 
 const ALL_PARSER_OPTIONS: {
   value: DocumentParserType
@@ -14,7 +15,7 @@ const ALL_PARSER_OPTIONS: {
 }[] = [
   { value: 'none', label: 'Text Only', mobileWebOnly: true }, // Basic text file support only (mobile/web only)
   { value: 'local', label: 'Local', desktopOnly: true }, // Only available on desktop
-  { value: 'chatbox-ai', label: 'Chatbox AI' },
+  ...(CHATBOX_AI_DOCUMENT_PARSER_ENABLED ? [{ value: 'chatbox-ai' as const, label: 'Chatbox AI' }] : []),
   { value: 'mineru', label: 'MinerU', desktopOnly: true }, // Only available on desktop (requires IPC)
 ]
 

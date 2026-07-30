@@ -26,13 +26,18 @@ import { useProviders } from '@/hooks/useProviders'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import platform from '@/platform'
 import { featureFlags } from '@/utils/feature-flags'
+import { CHATBOX_AI_SETTINGS_ENABLED } from '@/variables'
 
 const ITEMS = [
-  {
-    key: 'chatbox-ai',
-    label: 'Chatbox AI',
-    icon: <IconSparkles className="w-full h-full" />,
-  },
+  ...(CHATBOX_AI_SETTINGS_ENABLED
+    ? [
+        {
+          key: 'chatbox-ai',
+          label: 'Chatbox AI',
+          icon: <IconSparkles className="w-full h-full" />,
+        },
+      ]
+    : []),
   {
     key: 'provider',
     label: 'Model Provider',
