@@ -10,7 +10,6 @@ import { createMessage, type Message } from '@shared/types'
 import { countMessageWords } from '@shared/utils/message'
 import { createModel } from '@/adapters'
 import { getLogger } from '@/lib/utils'
-import { runCompactionWithUIState } from '@/packages/context-management'
 import { getModelDisplayName } from '@/packages/model-setting-utils'
 import { estimateTokensFromMessages } from '@/packages/token'
 import platform from '@/platform'
@@ -192,17 +191,7 @@ export async function submitNewUserMessage(
     return
   }
 
-  // Run compaction check before sending message (blocking)
-  // Only for chat sessions with auto-compaction enabled
-  if (session.type === 'chat' || session.type === undefined) {
-    const compactionResult = await runCompactionWithUIState(sessionId)
-    if (!compactionResult.success) {
-      throw compactionResult.error ?? new Error('Compaction failed')
-    }
-  }
-
-  // Invoke callback after compaction succeeds, before user message is inserted
-  // This allows caller to clear draft at the right time
+  // Clear the draft immediately before the user message is inserted.
   params.onUserMessageReady?.()
 
   let { newUserMsg } = params

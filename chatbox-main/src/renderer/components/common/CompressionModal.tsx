@@ -1,7 +1,7 @@
 import { Button, Stack, Text } from '@mantine/core'
 import type { Session } from '@shared/types/session'
 import { useTranslation } from 'react-i18next'
-import { runCompactionWithUIState } from '@/packages/context-management/compaction'
+import { runManualCompactionWithUIState } from '@/packages/context-management/compaction'
 import { AdaptiveModal } from './AdaptiveModal'
 
 interface CompressionModalProps {
@@ -15,7 +15,7 @@ export function CompressionModal({ opened, onClose, session }: CompressionModalP
 
   const handleConfirm = () => {
     onClose()
-    void runCompactionWithUIState(session.id, { force: true })
+    void runManualCompactionWithUIState(session.id)
   }
 
   return (

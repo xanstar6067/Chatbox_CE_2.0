@@ -147,7 +147,6 @@ export const SessionSettingsSchema = GlobalSessionSettingsSchema.extend({
   dalleStyle: z.enum(['vivid', 'natural']).optional().catch('vivid'),
   imageGenerateNum: z.number().optional().catch(1),
   providerOptions: ProviderOptionsSchema.optional().catch(undefined),
-  autoCompaction: z.boolean().optional().catch(undefined),
 })
 
 export const CompactionPromptSchema = z.object({
@@ -406,8 +405,6 @@ export const SettingsSchema = GlobalSessionSettingsSchema.extend({
 
   autoGenerateTitle: z.boolean().default(true),
 
-  autoCompaction: z.boolean().default(true),
-  compactionThreshold: z.number().min(0.4).max(0.9).default(0.6),
   compactionPrompts: z.array(CompactionPromptSchema).default([]),
   activeCompactionPromptId: z.string().default('builtin-detailed'),
 

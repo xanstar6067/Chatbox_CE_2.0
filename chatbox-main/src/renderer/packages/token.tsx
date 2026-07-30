@@ -97,7 +97,7 @@ export function estimateTokensFromMessages(
 
 /**
  * Sum cached token values from messages without calculation.
- * Used by needsCompaction for non-blocking token count checks.
+ * Used for non-blocking token count checks.
  * Actual calculation is done by InputBox's useTokenEstimation.
  */
 export function sumCachedTokensFromMessages(messages: Message[], model?: TokenModel): number {

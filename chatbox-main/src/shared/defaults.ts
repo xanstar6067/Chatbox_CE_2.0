@@ -100,8 +100,6 @@ export function settings(): Settings {
 
     autoGenerateTitle: true,
 
-    autoCompaction: true,
-    compactionThreshold: 0.6,
     compactionPrompts: [],
     activeCompactionPromptId: 'builtin-detailed',
 

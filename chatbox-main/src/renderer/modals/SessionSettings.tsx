@@ -13,7 +13,7 @@ import {
   Textarea,
   Tooltip,
 } from '@mantine/core'
-import { chatSessionSettings, pictureSessionSettings } from '@shared/defaults'
+import { pictureSessionSettings } from '@shared/defaults'
 import {
   createMessage,
   isChatSession,
@@ -35,7 +35,6 @@ import { useTranslation } from 'react-i18next'
 import { AdaptiveModal } from '@/components/common/AdaptiveModal'
 import { AssistantAvatar } from '@/components/common/Avatar'
 import LazyNumberInput from '@/components/common/LazyNumberInput'
-import MaxContextMessageCountSlider from '@/components/common/MaxContextMessageCountSlider'
 import { ScalableIcon } from '@/components/common/ScalableIcon'
 import SegmentedControl from '@/components/common/SegmentedControl'
 import SliderWithInput from '@/components/common/SliderWithInput'
@@ -754,11 +753,6 @@ export function ChatConfig({
 
   return (
     <Stack gap="md">
-      <MaxContextMessageCountSlider
-        value={settings?.maxContextMessageCount ?? chatSessionSettings().maxContextMessageCount!}
-        onChange={(v) => onSettingsChange({ maxContextMessageCount: v })}
-      />
-
       <Stack gap="xs">
         <Flex align="center" gap="xs">
           <Text size="sm" fw="600">

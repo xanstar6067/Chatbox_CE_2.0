@@ -52,7 +52,7 @@ export interface ContextTokensCacheKeyParams {
  * Value stored in context tokens cache
  */
 export interface ContextTokensCacheValue {
-  contextTokens: number // needsCompaction() reads this
+  contextTokens: number
   messageCount: number // for UI
   timestamp: number // for debugging
 }

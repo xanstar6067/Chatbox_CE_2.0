@@ -21,8 +21,6 @@ vi.mock('@/adapters', () => ({ createModel: vi.fn() }))
 
 vi.mock('@/packages/model-setting-utils', () => ({ getModelDisplayName: vi.fn() }))
 
-vi.mock('@/packages/context-management', () => ({ runCompactionWithUIState: vi.fn() }))
-
 vi.mock('../../settingActions', () => ({
   isPro: vi.fn().mockReturnValue(false),
   getRemoteConfig: vi.fn().mockResolvedValue({}),

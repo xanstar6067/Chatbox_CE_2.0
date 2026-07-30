@@ -1,9 +1,10 @@
-import { Flex, Loader, Menu, Switch, Text, Tooltip } from '@mantine/core'
+import { Box, Flex, Menu, Text } from '@mantine/core'
 import { formatNumber } from '@shared/utils'
 import { IconFileZip } from '@tabler/icons-react'
 import type { FC } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
+import MaxContextMessageCountSlider from '../common/MaxContextMessageCountSlider'
 import { ScalableIcon } from '../common/ScalableIcon'
 
 type Props = {
@@ -18,11 +19,7 @@ type Props = {
   maxContextMessageCount?: number
   children?: React.ReactNode
   onCompressClick?: () => void
-  // Auto-compaction props
-  autoCompactionEnabled?: boolean
-  isCompacting?: boolean
-  contextWindowKnown?: boolean
-  onAutoCompactionChange?: (enabled: boolean) => void
+  onMaxContextMessageCountChange?: (value: number) => void
 }
 
 const TokenCountMenu: FC<Props> = ({
@@ -37,48 +34,22 @@ const TokenCountMenu: FC<Props> = ({
   maxContextMessageCount,
   children,
   onCompressClick,
-  autoCompactionEnabled,
-  isCompacting,
-  contextWindowKnown = true,
-  onAutoCompactionChange,
+  onMaxContextMessageCountChange,
 }) => {
   const { t } = useTranslation()
   const isSmallScreen = useIsSmallScreen()
 
-  const autoCompactionToggle = onAutoCompactionChange !== undefined && (
-    <Menu.Item closeMenuOnClick={false} style={{ cursor: 'default' }}>
-      <Flex justify="space-between" align="center" gap="xs">
-        <Flex align="center" gap="xs">
-          <Text size="sm">{t('Auto Compaction')}</Text>
-          <Text size="xs" c="dimmed">
-            ({t('This session')})
-          </Text>
-        </Flex>
-        {isCompacting ? (
-          <Flex align="center" gap="xs">
-            <Loader size="xs" />
-            <Text size="xs" c="dimmed">
-              {t('Compacting...')}
-            </Text>
-          </Flex>
-        ) : (
-          <Tooltip
-            label={t('Context window unknown for this model')}
-            disabled={contextWindowKnown}
-            withArrow
-            position="top"
-          >
-            <Switch
-              size="xs"
-              checked={autoCompactionEnabled}
-              disabled={!contextWindowKnown || isCompacting}
-              onChange={(e) => onAutoCompactionChange(e.currentTarget.checked)}
-            />
-          </Tooltip>
-        )}
-      </Flex>
-    </Menu.Item>
-  )
+  const maxContextMessageCountControl = maxContextMessageCount !== undefined &&
+    onMaxContextMessageCountChange !== undefined && (
+      <Box px="sm" py="xs" onClick={(event) => event.stopPropagation()}>
+        <MaxContextMessageCountSlider
+          value={maxContextMessageCount}
+          onChange={onMaxContextMessageCountChange}
+          wrapperProps={{ gap: 'xxs' }}
+          labelProps={{ fw: 500 }}
+        />
+      </Box>
+    )
 
   return (
     <Menu
@@ -94,7 +65,7 @@ const TokenCountMenu: FC<Props> = ({
       }}
     >
       <Menu.Target>{children}</Menu.Target>
-      <Menu.Dropdown className="min-w-56">
+      <Menu.Dropdown w={isSmallScreen ? 'calc(100vw - 32px)' : 400} maw="calc(100vw - 16px)">
         <Flex justify="space-between" align="center" px="xs" pt="xs" pb="4">
           <Text size="sm" fw={600}>
             {t('Estimated Token Usage')}
@@ -167,10 +138,10 @@ const TokenCountMenu: FC<Props> = ({
           </Menu.Item>
         )}
 
-        {autoCompactionToggle && (
+        {maxContextMessageCountControl && (
           <>
             <Menu.Divider />
-            {autoCompactionToggle}
+            {maxContextMessageCountControl}
           </>
         )}
 

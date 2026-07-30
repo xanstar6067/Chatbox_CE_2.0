@@ -28,8 +28,6 @@ vi.mock('@/stores/settingsStore', () => ({
       getSettings: () => ({
         licenseKey: '',
         language: 'en',
-        autoCompaction: true,
-        compactionThreshold: 0.6,
       }),
     }),
   },

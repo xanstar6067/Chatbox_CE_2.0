@@ -8,7 +8,6 @@ import {
   checkOverflow,
   cleanToolCalls,
   DEFAULT_COMPACTION_THRESHOLD,
-  isAutoCompactionEnabled,
   OUTPUT_RESERVE_TOKENS,
 } from '../../../src/renderer/packages/context-management'
 import type {
@@ -19,7 +18,7 @@ import type {
   Session,
   SessionThread,
 } from '../../../src/shared/types/session'
-import type { SessionSettings, Settings } from '../../../src/shared/types/settings'
+import type { SessionSettings } from '../../../src/shared/types/settings'
 
 vi.mock('../../../src/renderer/packages/model-registry', () => ({
   getModelContextWindowSync: vi.fn((modelId: string) => {
@@ -386,41 +385,6 @@ describe('Context Management Integration Tests', () => {
       // Should use session messages
       expect(result).toHaveLength(2)
       expect(result[0].contentParts[0]).toEqual({ type: 'text', text: 'Session message' })
-    })
-  })
-
-  describe('Session-level vs Global Settings Priority', () => {
-    it('should prioritize session-level autoCompaction over global', () => {
-      const globalSettings: Partial<Settings> = { autoCompaction: true }
-      const sessionSettings: SessionSettings = { autoCompaction: false }
-
-      const result = isAutoCompactionEnabled(sessionSettings, globalSettings as Settings)
-
-      expect(result).toBe(false) // Session setting takes priority
-    })
-
-    it('should use global autoCompaction when session is undefined', () => {
-      const globalSettings: Partial<Settings> = { autoCompaction: false }
-      const sessionSettings: SessionSettings = {} // autoCompaction undefined
-
-      const result = isAutoCompactionEnabled(sessionSettings, globalSettings as Settings)
-
-      expect(result).toBe(false) // Falls back to global
-    })
-
-    it('should default to true when both are undefined', () => {
-      const result = isAutoCompactionEnabled(undefined, undefined)
-
-      expect(result).toBe(true) // Default is true
-    })
-
-    it('should use session true over global false', () => {
-      const globalSettings: Partial<Settings> = { autoCompaction: false }
-      const sessionSettings: SessionSettings = { autoCompaction: true }
-
-      const result = isAutoCompactionEnabled(sessionSettings, globalSettings as Settings)
-
-      expect(result).toBe(true)
     })
   })
 

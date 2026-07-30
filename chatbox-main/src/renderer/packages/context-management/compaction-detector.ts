@@ -1,4 +1,3 @@
-import type { Settings } from '@shared/types'
 import { getModelContextWindowSync } from '../model-registry'
 
 const OUTPUT_RESERVE_TOKENS = 32_000
@@ -7,7 +6,9 @@ const DEFAULT_COMPACTION_THRESHOLD = 0.6
 export interface OverflowCheckOptions {
   tokens: number
   modelId: string
-  settings?: Partial<Pick<Settings, 'compactionThreshold'>>
+  settings?: {
+    compactionThreshold?: number
+  }
   /**
    * Override context window value. If provided, this takes precedence over
    * auto-detected value from the model registry (models.dev snapshot/cache).
@@ -63,7 +64,9 @@ export function isOverflow(options: OverflowCheckOptions): boolean {
 
 export function getCompactionThresholdTokens(
   modelId: string,
-  settings?: Partial<Pick<Settings, 'compactionThreshold'>>,
+  settings?: {
+    compactionThreshold?: number
+  },
   providedContextWindow?: number
 ): number | null {
   const contextWindow = providedContextWindow ?? getModelContextWindowSync(modelId)

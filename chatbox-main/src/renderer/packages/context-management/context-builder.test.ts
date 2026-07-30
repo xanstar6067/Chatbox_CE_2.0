@@ -492,7 +492,7 @@ describe('buildContextForThread', () => {
       ],
       createdAt: Date.now(),
     }
-    const sessionSettings: SessionSettings = { autoCompaction: false }
+    const sessionSettings: SessionSettings = {}
 
     const result = buildContextForThread(thread, { keepToolCallRounds: 1, sessionSettings })
 

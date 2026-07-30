@@ -57,12 +57,7 @@ import { useProviders } from '@/hooks/useProviders'
 import { useSaveBlob } from '@/hooks/useSaveBlob'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import { cn } from '@/lib/utils'
-import {
-  getContextMessageIds,
-  isAutoCompactionEnabled,
-  isCompactionInProgress,
-  useContextTokens,
-} from '@/packages/context-management'
+import { getContextMessageIds, useContextTokens } from '@/packages/context-management'
 import { trackingEvent } from '@/packages/event'
 import {
   getModelContextWindowSync,
@@ -554,27 +549,11 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
         constructedMessage: preConstructedMessage.message,
       })
 
-    const globalSettings = useSettingsStore((state) => state)
-    const [isCompacting, setIsCompacting] = useState(false)
-
     const compactionUIStateMap = useAtomValue(compactionUIStateMapAtom)
     const isCompactionRunning = useMemo(() => {
       if (!currentSessionId || isNewSession) return false
       return compactionUIStateMap[currentSessionId]?.status === 'running'
     }, [compactionUIStateMap, currentSessionId, isNewSession])
-
-    const autoCompactionEnabled = useMemo(() => {
-      if (!currentSession) return globalSettings.autoCompaction ?? true
-      return isAutoCompactionEnabled(currentSession.settings, globalSettings)
-    }, [currentSession, globalSettings])
-
-    const contextWindowKnown = useMemo(() => {
-      if (!model?.modelId) return false
-      if (modelInfo?.contextWindow) return true
-      if (model?.provider && getProviderModelContextWindowSync(model.provider, model.modelId) !== null) return true
-      // Fallback: provider-agnostic lookup (same as compaction detector)
-      return getModelContextWindowSync(model.modelId) !== null
-    }, [model?.modelId, model?.provider, modelInfo?.contextWindow, modelRegistryVersion])
 
     // Use model setting contextWindow if available, otherwise fallback to models.dev data
     const effectiveContextWindow = useMemo(() => {
@@ -594,23 +573,10 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
       return Math.round((totalTokens / effectiveContextWindow) * 100)
     }, [totalTokens, effectiveContextWindow])
 
-    useEffect(() => {
-      if (!currentSessionId || isNewSession) {
-        setIsCompacting(false)
-        return
-      }
-      const checkCompacting = () => {
-        setIsCompacting(isCompactionInProgress(currentSessionId))
-      }
-      checkCompacting()
-      const interval = setInterval(checkCompacting, 1000)
-      return () => clearInterval(interval)
-    }, [currentSessionId, isNewSession])
-
-    const handleAutoCompactionChange = useCallback(
-      async (enabled: boolean) => {
+    const handleMaxContextMessageCountChange = useCallback(
+      (value: number) => {
         if (!currentSessionId || isNewSession) return
-        await chatStore.updateSession(currentSessionId, (session) => {
+        void chatStore.updateSession(currentSessionId, (session) => {
           if (!session) {
             throw new Error('Session not found')
           }
@@ -618,7 +584,7 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
             ...session,
             settings: {
               ...session.settings,
-              autoCompaction: enabled,
+              maxContextMessageCount: value,
             },
           }
         })
@@ -1712,10 +1678,9 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
                   currentMessageCount={currentContextMessageIds?.length ?? 0}
                   maxContextMessageCount={currentSessionMergedSettings?.maxContextMessageCount}
                   onCompressClick={sessionId && !isNewSession ? () => setShowCompressionModal(true) : undefined}
-                  autoCompactionEnabled={autoCompactionEnabled}
-                  isCompacting={isCompacting}
-                  contextWindowKnown={contextWindowKnown}
-                  onAutoCompactionChange={sessionId && !isNewSession ? handleAutoCompactionChange : undefined}
+                  onMaxContextMessageCountChange={
+                    sessionId && !isNewSession ? handleMaxContextMessageCountChange : undefined
+                  }
                 >
                   <Flex
                     align="center"

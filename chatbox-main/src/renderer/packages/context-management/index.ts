@@ -1,10 +1,5 @@
-export type { CompactionOptions, CompactionResult } from './compaction'
-export {
-  isAutoCompactionEnabled,
-  isCompactionInProgress,
-  needsCompaction,
-  runCompactionWithUIState,
-} from './compaction'
+export type { CompactionResult } from './compaction'
+export { runManualCompactionWithUIState } from './compaction'
 export type { OverflowCheckOptions, OverflowCheckResult } from './compaction-detector'
 export {
   checkOverflow,

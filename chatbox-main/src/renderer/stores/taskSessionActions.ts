@@ -76,21 +76,10 @@ export async function cancelTaskGeneration(taskId?: string): Promise<void> {
 
 export async function submitTaskMessage(taskId: string, content: string): Promise<void> {
   const queryKey = [TASK_SESSION_QUERY_KEY, taskId]
-  let currentSession = queryClient.getQueryData<TaskSession>(queryKey)
+  const currentSession = queryClient.getQueryData<TaskSession>(queryKey)
   if (!currentSession) {
     log.error('Task session not found:', taskId)
     return
-  }
-
-  // Run compaction check before sending (same as chat mode)
-  try {
-    const { runTaskCompaction } = await import('./taskCompaction')
-    await runTaskCompaction(taskId)
-    // Re-fetch session after compaction (may have added messages/points)
-    currentSession = queryClient.getQueryData<TaskSession>(queryKey) ?? currentSession
-  } catch (err) {
-    log.error('Task compaction failed:', err)
-    // Don't block on compaction failure — proceed with send
   }
 
   const userMessage: Message = createMessage('user', content)

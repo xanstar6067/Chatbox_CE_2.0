@@ -4,7 +4,6 @@ import {
   FileButton,
   Flex,
   Select,
-  Slider,
   Stack,
   Switch,
   Text,
@@ -17,7 +16,7 @@ import { chatSessionSettings, getDefaultPrompt } from '@shared/defaults'
 import type { CompactionPrompt } from '@shared/types'
 import { IconInfoCircle } from '@tabler/icons-react'
 import { createFileRoute } from '@tanstack/react-router'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { v4 as uuidv4 } from 'uuid'
 import { AdaptiveModal } from '@/components/common/AdaptiveModal'
@@ -481,100 +480,12 @@ export function RouteComponent() {
 
 function ContextManagementSection() {
   const { t } = useTranslation()
-  const { setSettings, ...settings } = useSettingsStore((state) => state)
-
-  // Get strategy hint based on threshold value
-  const strategyHint = useMemo(() => {
-    const threshold = settings.compactionThreshold ?? 0.6
-    if (threshold <= 0.5) {
-      return t('Cost Priority: Compacts early to save tokens, may lose some context')
-    }
-    if (threshold >= 0.8) {
-      return t('Context Priority: Preserves more context, uses more tokens')
-    }
-    return t('Balanced: Good balance between cost and context preservation')
-  }, [settings.compactionThreshold, t])
 
   return (
     <Stack gap="xl">
       <Text fw="600">{t('Context Management')}</Text>
 
-      {/* Auto Compaction Toggle */}
-      <Stack gap="sm">
-        <Flex align="center" gap="xs" justify="space-between">
-          <Flex align="center" gap="xs">
-            <Text size="sm">{t('Auto Compaction')}</Text>
-            <Tooltip
-              label={t(
-                'Automatically summarize and compact conversation history when context size exceeds the threshold, preserving key information while reducing token usage.'
-              )}
-              withArrow={true}
-              maw={320}
-              className="!whitespace-normal"
-              zIndex={3000}
-              events={{ hover: true, focus: true, touch: true }}
-            >
-              <ScalableIcon icon={IconInfoCircle} size={20} className="text-chatbox-tint-tertiary" />
-            </Tooltip>
-          </Flex>
-          <Switch
-            checked={settings.autoCompaction ?? true}
-            onChange={() =>
-              setSettings({
-                autoCompaction: !(settings.autoCompaction ?? true),
-              })
-            }
-          />
-        </Flex>
-        <Text c="chatbox-tertiary" size="xs">
-          {t('When enabled, conversations will be automatically summarized to manage context window usage.')}
-        </Text>
-      </Stack>
-
       <CompactionPromptManager />
-
-      {/* Compaction Threshold Slider */}
-      <Stack gap="sm">
-        <Flex align="center" gap="xs">
-          <Text size="sm">{t('Compaction Threshold')}</Text>
-          <Tooltip
-            label={t(
-              'The percentage of context window usage that triggers automatic compaction. Lower values save tokens but may lose context earlier.'
-            )}
-            withArrow={true}
-            maw={320}
-            className="!whitespace-normal"
-            zIndex={3000}
-            events={{ hover: true, focus: true, touch: true }}
-          >
-            <ScalableIcon icon={IconInfoCircle} size={20} className="text-chatbox-tint-tertiary" />
-          </Tooltip>
-        </Flex>
-
-        <Stack gap="xs" mt="xs">
-          <Slider
-            min={0.4}
-            max={0.9}
-            step={0.05}
-            value={settings.compactionThreshold ?? 0.6}
-            onChange={(v) => setSettings({ compactionThreshold: v })}
-            label={(v) => `${Math.round(v * 100)}%`}
-            disabled={!(settings.autoCompaction ?? true)}
-          />
-          <Flex justify="space-between" px={2}>
-            <Text size="xs" c="chatbox-tertiary">
-              {t('Cost')}
-            </Text>
-            <Text size="xs" c="chatbox-tertiary">
-              {t('Context')}
-            </Text>
-          </Flex>
-        </Stack>
-
-        <Text c="chatbox-tertiary" size="xs">
-          {strategyHint}
-        </Text>
-      </Stack>
     </Stack>
   )
 }
@@ -663,14 +574,7 @@ function CompactionPromptManager() {
   return (
     <>
       <Stack gap="sm">
-        <Stack gap="xxs">
-          <Text size="sm">{t('Compaction Prompt')}</Text>
-          <Text c="chatbox-tertiary" size="xs">
-            {t(
-              'Choose what information the model must preserve. The selected prompt is used for both automatic and manual compaction.'
-            )}
-          </Text>
-        </Stack>
+        <Text size="sm">{t('Compaction Prompt')}</Text>
 
         <Select
           value={selectedPromptId}
