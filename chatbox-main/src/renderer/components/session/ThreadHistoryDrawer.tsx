@@ -1,7 +1,7 @@
 import NiceModal from '@ebay/nice-modal-react'
 import { ActionIcon, Badge, Flex, ScrollArea, Text } from '@mantine/core'
 import SwipeableDrawer from '@mui/material/SwipeableDrawer'
-import type { Session, SessionThreadBrief } from '@shared/types'
+import type { Session } from '@shared/types'
 import { IconDots, IconEdit, IconSwitch, IconTrash, IconX } from '@tabler/icons-react'
 import { useAtom, useAtomValue } from 'jotai'
 import { useCallback, useMemo, useState } from 'react'
@@ -9,8 +9,9 @@ import { useTranslation } from 'react-i18next'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import { currentSessionIdAtom, showThreadHistoryDrawerAtom } from '@/stores/atoms'
 import { scrollToIndex } from '@/stores/scrollActions'
+import { getThreadHistoryList, type ThreadHistoryListItem } from '@/stores/session/threadHistory'
 import { removeCurrentThread, removeThread, switchThread as switchThreadAction } from '@/stores/sessionActions'
-import { getAllMessageList, getCurrentThreadHistoryHash } from '@/stores/sessionHelpers'
+import { getAllMessageList } from '@/stores/sessionHelpers'
 import { useLanguage } from '@/stores/settingsStore'
 import { CHATBOX_BUILD_PLATFORM } from '@/variables'
 import ActionMenu from '../ActionMenu'
@@ -23,11 +24,7 @@ export default function ThreadHistoryDrawer({ session }: { session: Session }) {
 
   const currentMessageList = useMemo(() => getAllMessageList(session), [session])
 
-  const currentThreadHistoryHash = useMemo(() => getCurrentThreadHistoryHash(session), [session])
-  const threadList = useMemo(
-    () => (currentThreadHistoryHash ? Object.values(currentThreadHistoryHash) : []),
-    [currentThreadHistoryHash]
-  )
+  const threadList = useMemo(() => getThreadHistoryList(session), [session])
 
   const gotoThreadMessage = useCallback(
     (threadId: string) => {
@@ -99,7 +96,7 @@ export default function ThreadHistoryDrawer({ session }: { session: Session }) {
 }
 
 function ThreadItem(props: {
-  thread: SessionThreadBrief
+  thread: ThreadHistoryListItem
   goto(threadId: string): void
   showHistoryDrawer: string | boolean
   switchThread(threadId: string): void
@@ -107,7 +104,7 @@ function ThreadItem(props: {
 }) {
   const { t } = useTranslation()
   const { thread, goto, switchThread, lastOne } = props
-  const threadName = thread.name || t('New Thread')
+  const threadName = thread.name || t(thread.kind === 'compaction' ? 'Earlier messages summarized' : 'New Thread')
   const currentSessionId = useAtomValue(currentSessionIdAtom)
   const isSmallScreen = useIsSmallScreen()
 
@@ -136,46 +133,55 @@ function ThreadItem(props: {
       {/* <Text size="xs" c="chatbox-tertiary">
         {thread.messageCount}
       </Text> */}
-      <Text size="xs" lineClamp={1} flex={1}>
-        {threadName} ({thread.createdAtLabel})
-      </Text>
-      <ActionMenu
-        position="bottom"
-        type="desktop"
-        items={[
-          { text: t('Edit Thread Name'), icon: IconEdit, onClick: onEditButtonClick },
-          { text: t('Switch'), icon: IconSwitch, onClick: onSwitchButtonClick },
-          {
-            divider: true,
-          },
-          {
-            doubleCheck: true,
-            text: t('Delete'),
-            icon: IconTrash,
-            onClick: () => {
-              if (!currentSessionId) {
-                return
-              }
-              if (lastOne) {
-                void removeCurrentThread(currentSessionId)
-              } else {
-                void removeThread(currentSessionId, thread.id)
-              }
+      <Flex direction="column" gap={0} flex={1} miw={0}>
+        <Text size="xs" lineClamp={1}>
+          {threadName}
+        </Text>
+        {thread.createdAtLabel && (
+          <Text size="xs" c="chatbox-tertiary" lineClamp={1}>
+            {thread.createdAtLabel}
+          </Text>
+        )}
+      </Flex>
+      {thread.kind === 'thread' && (
+        <ActionMenu
+          position="bottom"
+          type="desktop"
+          items={[
+            { text: t('Edit Thread Name'), icon: IconEdit, onClick: onEditButtonClick },
+            { text: t('Switch'), icon: IconSwitch, onClick: onSwitchButtonClick },
+            {
+              divider: true,
             },
-          },
-        ]}
-        opened={menuOpened}
-        onChange={(opened) => setMenuOpened(opened)}
-      >
-        <ActionIcon
-          variant="transparent"
-          color="chatbox-primary"
-          className={isSmallScreen || menuOpened ? '' : 'group-hover/thread-item:visible invisible'}
-          onClick={(e) => e.stopPropagation()}
+            {
+              doubleCheck: true,
+              text: t('Delete'),
+              icon: IconTrash,
+              onClick: () => {
+                if (!currentSessionId) {
+                  return
+                }
+                if (lastOne) {
+                  void removeCurrentThread(currentSessionId)
+                } else {
+                  void removeThread(currentSessionId, thread.id)
+                }
+              },
+            },
+          ]}
+          opened={menuOpened}
+          onChange={(opened) => setMenuOpened(opened)}
         >
-          <ScalableIcon icon={IconDots} />
-        </ActionIcon>
-      </ActionMenu>
+          <ActionIcon
+            variant="transparent"
+            color="chatbox-primary"
+            className={isSmallScreen || menuOpened ? '' : 'group-hover/thread-item:visible invisible'}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ScalableIcon icon={IconDots} />
+          </ActionIcon>
+        </ActionMenu>
+      )}
     </Flex>
   )
 }
