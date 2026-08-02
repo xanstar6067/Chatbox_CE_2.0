@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Includes WebView/IndexedDB blobs as well as Capacitor SQLite preferences and databases. -->
+    <include domain="root" path="." />
+    <include domain="file" path="." />
+    <include domain="database" path="." />
+    <include domain="sharedpref" path="." />
+    <!-- Android Keystore keys are not restored with their encrypted preferences. -->
+    <exclude domain="sharedpref" path="sqlite_encrypted_shared_prefs.xml" />
+</full-backup-content>

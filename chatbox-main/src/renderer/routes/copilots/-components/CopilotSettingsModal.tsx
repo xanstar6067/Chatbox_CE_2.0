@@ -2,18 +2,35 @@ import NiceModal, { useModal } from '@ebay/nice-modal-react'
 import { Avatar, Button, FileButton, Flex, Stack, Text, Textarea, TextInput } from '@mantine/core'
 import type { CopilotDetail } from '@shared/types'
 import { IconMessageCircle2Filled, IconPhoto, IconUpload } from '@tabler/icons-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { v4 as uuidv4 } from 'uuid'
 import { AdaptiveModal } from '@/components/common/AdaptiveModal'
 import { ScalableIcon } from '@/components/common/ScalableIcon'
-import { handleImageInputAndSave, ImageInStorage } from '@/components/Image'
+import { ImageInStorage } from '@/components/Image'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
+import { deleteCopilotMedia, getCopilotMediaStorageKeys } from '@/packages/copilot-media'
 import { trackingEvent } from '@/packages/event'
 import storage from '@/storage'
 import { StorageKeyGenerator } from '@/storage/StoreStorage'
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
+type CopilotMediaField = 'avatar' | 'backgroundImage'
+
+function readImageAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read image'))
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result)
+      } else {
+        reject(new Error('Failed to read image as a data URL'))
+      }
+    }
+    reader.readAsDataURL(file)
+  })
+}
 
 export interface CopilotSettingsModalProps {
   copilot?: CopilotDetail | null
@@ -29,9 +46,14 @@ const CopilotSettingsModal = NiceModal.create(
     const isSmallScreen = useIsSmallScreen()
     const [formData, setFormData] = useState<CopilotDetail | null>(null)
     const [errors, setErrors] = useState<Record<string, string>>({})
+    const [mediaUploadCount, setMediaUploadCount] = useState(0)
+    const pendingMediaKeysRef = useRef(new Set<string>())
+    const latestMediaKeysRef = useRef<Partial<Record<CopilotMediaField, string>>>({})
 
     useEffect(() => {
       if (modal.visible) {
+        pendingMediaKeysRef.current.clear()
+        latestMediaKeysRef.current = {}
         if (copilot) {
           setFormData({ ...copilot })
         } else {
@@ -45,6 +67,39 @@ const CopilotSettingsModal = NiceModal.create(
         setErrors({})
       }
     }, [modal.visible, copilot])
+
+    const uploadCopilotMedia = async (file: File, key: string, field: CopilotMediaField) => {
+      if (!file.type.startsWith('image/')) return
+
+      pendingMediaKeysRef.current.add(key)
+      latestMediaKeysRef.current[field] = key
+      setMediaUploadCount((count) => count + 1)
+
+      try {
+        const dataUrl = await readImageAsDataUrl(file)
+        await storage.setBlob(key, dataUrl)
+
+        if (!pendingMediaKeysRef.current.has(key) || latestMediaKeysRef.current[field] !== key) {
+          pendingMediaKeysRef.current.delete(key)
+          await deleteCopilotMedia([key], storage)
+          return
+        }
+
+        setFormData((current) =>
+          current ? { ...current, [field]: { type: 'storage-key', storageKey: key } } : current
+        )
+        setErrors((current) => (current[field] ? { ...current, [field]: '' } : current))
+      } catch (error) {
+        pendingMediaKeysRef.current.delete(key)
+        if (latestMediaKeysRef.current[field] === key) {
+          delete latestMediaKeysRef.current[field]
+        }
+        await deleteCopilotMedia([key], storage)
+        console.error('Failed to save Copilot media', error)
+      } finally {
+        setMediaUploadCount((count) => Math.max(0, count - 1))
+      }
+    }
 
     const updateField = <K extends keyof CopilotDetail>(field: K, value: CopilotDetail[K]) => {
       if (!formData) return
@@ -62,14 +117,7 @@ const CopilotSettingsModal = NiceModal.create(
         return
       }
       const key = StorageKeyGenerator.picture(`copilot-icon:${formData.id}`)
-      handleImageInputAndSave(
-        file,
-        key,
-        () => {
-          updateField('avatar', { type: 'storage-key', storageKey: key })
-        },
-        (k, v) => storage.setBlob(k, v)
-      )
+      void uploadCopilotMedia(file, key, 'avatar')
     }
 
     const handleBackgroundUpload = (file: File | null) => {
@@ -79,14 +127,7 @@ const CopilotSettingsModal = NiceModal.create(
         return
       }
       const key = StorageKeyGenerator.picture(`copilot-bg:${formData.id}`)
-      handleImageInputAndSave(
-        file,
-        key,
-        () => {
-          updateField('backgroundImage', { type: 'storage-key', storageKey: key })
-        },
-        (k, v) => storage.setBlob(k, v)
-      )
+      void uploadCopilotMedia(file, key, 'backgroundImage')
     }
 
     const validate = (): boolean => {
@@ -105,11 +146,15 @@ const CopilotSettingsModal = NiceModal.create(
     }
 
     const handleClose = () => {
+      void deleteCopilotMedia(pendingMediaKeysRef.current, storage)
+      pendingMediaKeysRef.current.clear()
+      latestMediaKeysRef.current = {}
       modal.resolve()
       modal.hide()
     }
 
     const handleSave = () => {
+      if (mediaUploadCount > 0) return
       if (!formData) return
       if (!validate()) return
 
@@ -121,6 +166,12 @@ const CopilotSettingsModal = NiceModal.create(
         description: formData.description?.trim(),
         updatedAt: Date.now(),
       }
+
+      const retainedMediaKeys = getCopilotMediaStorageKeys(trimmedData)
+      const unusedPendingKeys = Array.from(pendingMediaKeysRef.current).filter((key) => !retainedMediaKeys.has(key))
+      void deleteCopilotMedia(unusedPendingKeys, storage)
+      pendingMediaKeysRef.current.clear()
+      latestMediaKeysRef.current = {}
 
       onSave(trimmedData)
       trackingEvent(mode === 'edit' ? 'edit_copilot' : 'create_copilot', { event_category: 'user' })
@@ -310,7 +361,9 @@ const CopilotSettingsModal = NiceModal.create(
             <Button variant="outline" onClick={handleClose}>
               {t('cancel')}
             </Button>
-            <Button onClick={handleSave}>{t('save')}</Button>
+            <Button onClick={handleSave} loading={mediaUploadCount > 0}>
+              {t('save')}
+            </Button>
           </Flex>
         </Flex>
       </AdaptiveModal>

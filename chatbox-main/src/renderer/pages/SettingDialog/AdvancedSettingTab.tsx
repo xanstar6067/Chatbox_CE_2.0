@@ -10,7 +10,7 @@ import {
   Typography,
   useTheme,
 } from '@mui/material'
-import type { Settings } from '@shared/types'
+import type { CopilotDetail, Settings } from '@shared/types'
 import { uniqBy } from 'lodash'
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -18,6 +18,7 @@ import { Accordion, AccordionDetails, AccordionSummary } from '@/components/Acco
 import TextFieldReset from '@/components/common/TextFieldReset'
 import { ShortcutConfig } from '@/components/Shortcut'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
+import { addCopilotMediaToBackup, restoreCopilotMediaFromBackup } from '@/packages/copilot-media'
 import platform from '@/platform'
 import storage, { StorageKey } from '@/storage'
 import { migrateOnData } from '@/stores/migration'
@@ -183,14 +184,16 @@ function ExportAndImport(props: { onCancel: () => void }) {
     }
     if (!exportItems.includes(ExportDataItem.Copilot)) {
       delete data[StorageKey.MyCopilots]
+    } else {
+      await addCopilotMediaToBackup(data, (data[StorageKey.MyCopilots] as CopilotDetail[] | undefined) ?? [], storage)
     }
     const date = new Date()
-    data['__exported_items'] = exportItems
-    data['__exported_at'] = date.toISOString()
+    data.__exported_items = exportItems
+    data.__exported_at = date.toISOString()
     const dateStr = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
-    platform.exporter.exportTextFile(`chatbox-exported-data-${dateStr}.json`, JSON.stringify(data))
+    await platform.exporter.exportTextFile(`chatbox-exported-data-${dateStr}.json`, JSON.stringify(data))
   }
-  const onImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const errTip = t('Import failed, unsupported data format')
     const file = e.target.files?.[0]
     if (!file) {
@@ -198,7 +201,7 @@ function ExportAndImport(props: { onCancel: () => void }) {
     }
     const reader = new FileReader()
     reader.onload = (event) => {
-      ;(async () => {
+      void (async () => {
         setImportTips('')
         try {
           const result = event.target?.result
@@ -206,6 +209,9 @@ function ExportAndImport(props: { onCancel: () => void }) {
             throw new Error('FileReader result is not string')
           }
           const importData = JSON.parse(result)
+          if (!importData || typeof importData !== 'object' || Array.isArray(importData)) {
+            throw new Error('Imported backup must be a JSON object')
+          }
           // 如果导入数据中包含了老的版本号，应该仅仅针对老的版本号进行迁移
           await migrateOnData(
             {
@@ -220,6 +226,12 @@ function ExportAndImport(props: { onCancel: () => void }) {
               },
             },
             false
+          )
+
+          await restoreCopilotMediaFromBackup(
+            importData,
+            (importData[StorageKey.MyCopilots] as CopilotDetail[] | undefined) ?? [],
+            storage
           )
 
           const previousData = await storage.getAll()

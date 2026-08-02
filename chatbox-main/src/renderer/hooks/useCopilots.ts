@@ -3,6 +3,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { useAtom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
 import { useMemo } from 'react'
+import { deleteCopilotMedia, getRemovedCopilotMediaKeys } from '@/packages/copilot-media'
 import * as remote from '@/packages/remote'
 import storage, { StorageKey } from '@/storage'
 import { useLanguage } from '@/stores/settingsStore'
@@ -39,6 +40,7 @@ export function useMyCopilots() {
           updatedAt: Date.now(),
         })
       }
+      void deleteCopilotMedia(getRemovedCopilotMediaKeys(copilots, newCopilots), storage)
       return newCopilots
     })
   }
@@ -46,7 +48,9 @@ export function useMyCopilots() {
   const remove = (id: string) => {
     setCopilots(async (prev) => {
       const copilots = await prev
-      return copilots.filter((c) => c.id !== id)
+      const nextCopilots = copilots.filter((c) => c.id !== id)
+      void deleteCopilotMedia(getRemovedCopilotMediaKeys(copilots, nextCopilots), storage)
+      return nextCopilots
     })
   }
 

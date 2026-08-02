@@ -10,6 +10,14 @@ const config: CapacitorConfig = {
   android: {
     adjustMarginsForEdgeToEdge: 'auto',
   },
+  plugins: {
+    CapacitorSQLite: {
+      // Chatbox opens every mobile database with `no-encryption`. Leaving the
+      // plugin default enabled creates an unused Keystore-backed preference
+      // file that cannot be decrypted after Android restores app data.
+      androidIsEncryption: false,
+    },
+  },
 }
 
 export default config
