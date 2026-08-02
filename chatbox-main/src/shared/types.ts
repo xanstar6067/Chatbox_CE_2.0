@@ -419,6 +419,7 @@ export type FileMeta = {
 }
 
 export * from './types/image-generation'
+export * from './types/video-generation'
 export * from './types/session'
 export * from './types/settings'
 export * from './types/skills'

@@ -1,11 +1,14 @@
 import type { ModelMessage, TextStreamPart, ToolSet } from 'ai'
 import {
+  type DownloadedVideo,
   type MessageContentParts,
   type MessageStatus,
   type ProviderOptions,
   ProviderOptionsSchema,
   type StreamTextResult,
   type ToolUseScope,
+  type VideoGenerationInput,
+  type VideoGenerationJob,
 } from 'src/shared/types'
 import { z } from 'zod'
 
@@ -28,6 +31,9 @@ export interface ModelInterface {
     signal?: AbortSignal,
     callback?: (picBase64: string) => void | Promise<void>
   ) => Promise<string[]>
+  startVideoGeneration?: (params: VideoGenerationInput, signal?: AbortSignal) => Promise<VideoGenerationJob>
+  pollVideoGeneration?: (job: VideoGenerationJob, signal?: AbortSignal) => Promise<VideoGenerationJob>
+  downloadVideo?: (job: VideoGenerationJob, signal?: AbortSignal) => Promise<DownloadedVideo>
 }
 
 export interface NativeWebSearchConfig {

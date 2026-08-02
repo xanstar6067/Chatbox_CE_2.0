@@ -7,13 +7,48 @@ export interface GoogleThinkingConfig {
   includeThoughts?: boolean
 }
 
-const GOOGLE_THINKING_LEVELS_BY_MODEL: Array<[RegExp, GoogleThinkingLevel[]]> = [
-  // Per official Gemini thinking docs:
-  // - Pro models support low/medium/high (no minimal)
-  // - Flash and Flash-Lite models support minimal/low/medium/high
-  [/^gemini-3\.?[\d]*-pro(?!-image)/i, ['low', 'medium', 'high']],
-  [/^gemini-3\.?[\d]*-flash-lite/i, ['minimal', 'low', 'medium', 'high']],
-  [/^gemini-3\.?[\d]*-flash(?!-(lite|image))/i, ['minimal', 'low', 'medium', 'high']],
+const GOOGLE_THINKING_CONFIG_BY_MODEL: Array<{
+  pattern: RegExp
+  levels: GoogleThinkingLevel[]
+  defaultLevel: GoogleThinkingLevel
+}> = [
+  // Keep the more specific rules first. This mirrors Google's current
+  // generateContent thinking-level matrix rather than guessing by provider metadata.
+  {
+    pattern: /^gemini-3\.1-flash-lite-image/i,
+    levels: ['minimal', 'high'],
+    defaultLevel: 'minimal',
+  },
+  {
+    pattern: /^gemini-3\.[56]-flash-lite/i,
+    levels: ['minimal', 'low', 'medium', 'high'],
+    defaultLevel: 'minimal',
+  },
+  {
+    pattern: /^gemini-3\.[56]-flash/i,
+    levels: ['minimal', 'low', 'medium', 'high'],
+    defaultLevel: 'medium',
+  },
+  {
+    pattern: /^gemini-3\.1-pro(?!-image)/i,
+    levels: ['low', 'medium', 'high'],
+    defaultLevel: 'high',
+  },
+  {
+    pattern: /^gemini-3-pro(?!-image)/i,
+    levels: ['low', 'high'],
+    defaultLevel: 'high',
+  },
+  {
+    pattern: /^gemini-3\.1-flash-lite(?!-image)/i,
+    levels: ['minimal', 'low', 'medium', 'high'],
+    defaultLevel: 'minimal',
+  },
+  {
+    pattern: /^gemini-3(?:\.1)?-flash(?!-(lite|image))/i,
+    levels: ['minimal', 'low', 'medium', 'high'],
+    defaultLevel: 'high',
+  },
 ]
 
 export function getGoogleThinkingMode(modelId: string): GoogleThinkingMode {
@@ -34,15 +69,13 @@ export function getSupportedGoogleThinkingLevels(modelId: string): GoogleThinkin
     return []
   }
 
-  const match = GOOGLE_THINKING_LEVELS_BY_MODEL.find(([pattern]) => pattern.test(modelId))
+  const match = GOOGLE_THINKING_CONFIG_BY_MODEL.find(({ pattern }) => pattern.test(modelId))
 
-  return match?.[1] || []
+  return match?.levels || []
 }
 
 export function getDefaultGoogleThinkingLevel(modelId: string): GoogleThinkingLevel | undefined {
-  const supportedLevels = getSupportedGoogleThinkingLevels(modelId)
-
-  return supportedLevels.at(-1)
+  return GOOGLE_THINKING_CONFIG_BY_MODEL.find(({ pattern }) => pattern.test(modelId))?.defaultLevel
 }
 
 export function normalizeGoogleThinkingConfig(

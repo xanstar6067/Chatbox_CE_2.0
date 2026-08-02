@@ -174,6 +174,7 @@ export const openRouterProvider = defineProvider({
     return new OpenRouter(
       {
         apiKey: config.effectiveApiKey,
+        apiHost: config.formattedApiHost,
         model: config.model,
         temperature: config.settings.temperature,
         topP: config.settings.topP,

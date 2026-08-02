@@ -15,6 +15,7 @@ export const JK_PAGE_NAMES = {
   TASK_PAGE: 'task_page',
   SETTING_PAGE: 'setting_page',
   IMAGE_PAGE: 'image_page',
+  VIDEO_PAGE: 'video_page',
   COPILOTS_PAGE: 'copilots_page',
   HELP_PAGE: 'help_page',
   ABOUT_PAGE: 'about_page',

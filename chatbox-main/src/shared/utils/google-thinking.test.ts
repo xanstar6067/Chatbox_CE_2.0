@@ -14,8 +14,8 @@ describe('google-thinking utils', () => {
   })
 
   it('returns the documented thinking levels for supported Gemini 3 models', () => {
-    // Pro models: low/medium/high (no minimal)
-    expect(getSupportedGoogleThinkingLevels('gemini-3-pro-preview')).toEqual(['low', 'medium', 'high'])
+    // Original Gemini 3 Pro has no minimal/medium; 3.1 Pro added medium.
+    expect(getSupportedGoogleThinkingLevels('gemini-3-pro-preview')).toEqual(['low', 'high'])
     expect(getSupportedGoogleThinkingLevels('gemini-3.1-pro-preview')).toEqual(['low', 'medium', 'high'])
     // Flash models: minimal/low/medium/high
     expect(getSupportedGoogleThinkingLevels('gemini-3-flash-preview')).toEqual(['minimal', 'low', 'medium', 'high'])
@@ -25,6 +25,9 @@ describe('google-thinking utils', () => {
       'medium',
       'high',
     ])
+    expect(getSupportedGoogleThinkingLevels('gemini-3.5-flash')).toEqual(['minimal', 'low', 'medium', 'high'])
+    expect(getSupportedGoogleThinkingLevels('gemini-3.6-flash')).toEqual(['minimal', 'low', 'medium', 'high'])
+    expect(getSupportedGoogleThinkingLevels('gemini-3.1-flash-lite-image')).toEqual(['minimal', 'high'])
     // Image models: not in the supported list
     expect(getSupportedGoogleThinkingLevels('gemini-3.1-flash-image-preview')).toEqual([])
     expect(getSupportedGoogleThinkingLevels('gemini-3-pro-image-preview')).toEqual([])
@@ -33,6 +36,10 @@ describe('google-thinking utils', () => {
   it('uses the highest supported level as the default Gemini 3 thinking level', () => {
     expect(getDefaultGoogleThinkingLevel('gemini-3-pro-preview')).toBe('high')
     expect(getDefaultGoogleThinkingLevel('gemini-3-flash-preview')).toBe('high')
+    expect(getDefaultGoogleThinkingLevel('gemini-3.5-flash')).toBe('medium')
+    expect(getDefaultGoogleThinkingLevel('gemini-3.6-flash')).toBe('medium')
+    expect(getDefaultGoogleThinkingLevel('gemini-3.1-flash-lite-preview')).toBe('minimal')
+    expect(getDefaultGoogleThinkingLevel('gemini-3.1-flash-lite-image')).toBe('minimal')
     expect(getDefaultGoogleThinkingLevel('gemini-3.1-flash-image-preview')).toBeUndefined()
   })
 

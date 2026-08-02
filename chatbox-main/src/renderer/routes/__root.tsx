@@ -275,6 +275,8 @@ function Root() {
       pageName = JK_PAGE_NAMES.TASK_PAGE
     } else if (pathname.startsWith('/image-creator')) {
       pageName = JK_PAGE_NAMES.IMAGE_PAGE
+    } else if (pathname.startsWith('/video-creator')) {
+      pageName = JK_PAGE_NAMES.VIDEO_PAGE
     } else if (pathname.startsWith('/copilots')) {
       pageName = JK_PAGE_NAMES.COPILOTS_PAGE
     } else if (pathname.startsWith('/settings')) {

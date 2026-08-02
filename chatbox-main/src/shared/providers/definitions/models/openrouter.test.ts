@@ -28,13 +28,13 @@ function createDependencies(): ModelDependencies {
   }
 }
 
-function createModel(model: ProviderModelInfo) {
+function createModel(model: ProviderModelInfo, dependencies = createDependencies()) {
   return new OpenRouter(
     {
       apiKey: 'openrouter-test-key',
       model,
     },
-    createDependencies()
+    dependencies
   )
 }
 
@@ -115,5 +115,66 @@ describe('OpenRouter', () => {
     })
 
     expect(baseFetch.mock.calls[0][1]?.body).toBe('not-json')
+  })
+
+  it('uses the dedicated image API with reference images', async () => {
+    const dependencies = createDependencies()
+    vi.mocked(dependencies.request.apiRequest).mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: [{ b64_json: 'AQID', media_type: 'image/webp' }] }), { status: 200 })
+    )
+    const model = createModel({ modelId: 'bytedance-seed/seedream-4.5', type: 'image' }, dependencies)
+
+    await expect(
+      model.paint({
+        prompt: 'Watercolor city',
+        images: [{ imageUrl: 'data:image/png;base64,AAAA' }],
+        num: 1,
+        aspectRatio: '16:9',
+      })
+    ).resolves.toEqual(['data:image/webp;base64,AQID'])
+
+    expect(JSON.parse(vi.mocked(dependencies.request.apiRequest).mock.calls[0][0].body as string)).toEqual({
+      model: 'bytedance-seed/seedream-4.5',
+      prompt: 'Watercolor city',
+      n: 1,
+      aspect_ratio: '16:9',
+      input_references: [{ type: 'image_url', image_url: { url: 'data:image/png;base64,AAAA' } }],
+    })
+  })
+
+  it('submits and polls asynchronous video jobs', async () => {
+    const dependencies = createDependencies()
+    vi.mocked(dependencies.request.apiRequest)
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: 'job-1', status: 'pending', polling_url: '/api/v1/videos/job-1' }), {
+          status: 202,
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: 'job-1',
+            status: 'completed',
+            unsigned_urls: ['/videos/job-1/content?index=0'],
+            usage: { cost: 0.25 },
+          }),
+          { status: 200 }
+        )
+      )
+    const model = createModel({ modelId: 'google/veo-3.1-fast', type: 'video' }, dependencies)
+    const started = await model.startVideoGeneration({
+      prompt: 'Sunrise',
+      duration: 4,
+      resolution: '720p',
+      aspectRatio: '16:9',
+      generateAudio: true,
+    })
+    const completed = await model.pollVideoGeneration(started)
+
+    expect(started).toMatchObject({ id: 'job-1', status: 'pending' })
+    expect(completed).toMatchObject({ id: 'job-1', status: 'completed', cost: 0.25 })
+    expect(vi.mocked(dependencies.request.apiRequest).mock.calls[1][0].url).toBe(
+      'https://openrouter.ai/api/v1/videos/job-1'
+    )
   })
 })

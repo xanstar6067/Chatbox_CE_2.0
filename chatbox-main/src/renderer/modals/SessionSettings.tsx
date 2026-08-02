@@ -480,13 +480,20 @@ function ThinkingBudgetConfig({
         </Tooltip>
       </Flex>
 
-      <div style={{ minWidth: 0, overflowX: 'auto' }}>
-        <SegmentedControl
-          key="thinking-budget-control"
-          value={currentSegmentValue}
-          onChange={handleThinkingConfigChange}
-          data={thinkingBudgetOptions}
-        />
+      <div
+        className="overflow-x-auto overscroll-x-contain"
+        style={{ minWidth: 0, touchAction: 'pan-x', WebkitOverflowScrolling: 'touch' }}
+        data-testid="thinking-budget-scroll"
+      >
+        <div style={{ width: 'max-content', minWidth: '100%' }}>
+          <SegmentedControl
+            key="thinking-budget-control"
+            value={currentSegmentValue}
+            onChange={handleThinkingConfigChange}
+            data={thinkingBudgetOptions}
+            fullWidth={false}
+          />
+        </div>
       </div>
 
       {currentSegmentValue === 'custom' && (
@@ -553,14 +560,19 @@ function ThinkingLevelConfig({ currentLevel, supportedLevels, onLevelChange, too
         </Tooltip>
       </Flex>
 
-      <div style={{ minWidth: 0, overflowX: 'auto' }}>
-        <SegmentedControl
-          key={`thinking-level-control:${supportedLevels.join(',')}`}
-          value={currentLevel}
-          onChange={handleThinkingLevelChange}
-          data={thinkingLevelOptions}
-          fullWidth={false}
-        />
+      <div
+        className="overflow-x-auto overscroll-x-contain"
+        style={{ minWidth: 0, touchAction: 'pan-x', WebkitOverflowScrolling: 'touch' }}
+      >
+        <div style={{ width: 'max-content', minWidth: '100%' }}>
+          <SegmentedControl
+            key={`thinking-level-control:${supportedLevels.join(',')}`}
+            value={currentLevel}
+            onChange={handleThinkingLevelChange}
+            data={thinkingLevelOptions}
+            fullWidth={false}
+          />
+        </div>
       </div>
     </Stack>
   )

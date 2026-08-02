@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { getModelManifest, type RemoteModelInfo } from '@/packages/remote'
 import { useLanguage, useSettingsStore } from '@/stores/settingsStore'
+import { apiRequest } from '@/utils/request'
 import useChatboxAIModels from './useChatboxAIModels'
 import { useProviders } from './useProviders'
 
@@ -98,6 +99,29 @@ export function useProviderImageModels(provider: ModelProviderEnum, enabled: boo
   return data || []
 }
 
+function useOpenRouterImageModels(enabled: boolean): ImageModelOption[] {
+  const providerSettings = useSettingsStore((state) => state.providers?.[ModelProviderEnum.OpenRouter])
+  const apiHost = (providerSettings?.apiHost || 'https://openrouter.ai/api/v1').replace(/\/$/, '')
+  const { data } = useQuery({
+    queryKey: ['openrouter-image-models', apiHost],
+    enabled,
+    staleTime: 3600 * 1000,
+    queryFn: async () => {
+      const response = await apiRequest.get(
+        `${apiHost}/images/models`,
+        providerSettings?.apiKey ? { Authorization: `Bearer ${providerSettings.apiKey}` } : {},
+        { retry: 1, useProxy: providerSettings?.useProxy }
+      )
+      const payload = (await response.json()) as { data?: Array<{ id: string; name?: string }> }
+      return (payload.data || []).map((model) => ({
+        modelId: model.id,
+        displayName: model.name || model.id,
+      }))
+    },
+  })
+  return data || []
+}
+
 export function useImageModelGroups(): ImageModelGroup[] {
   const { providers } = useProviders()
   const { chatboxAIImageModels } = useChatboxAIModels()
@@ -107,6 +131,7 @@ export function useImageModelGroups(): ImageModelGroup[] {
   const openAIProvider = providers.find((p) => p.id === ModelProviderEnum.OpenAI)
   const geminiProvider = providers.find((p) => p.id === ModelProviderEnum.Gemini)
   const xaiProvider = providers.find((p) => p.id === ModelProviderEnum.XAI)
+  const openRouterProvider = providers.find((p) => p.id === ModelProviderEnum.OpenRouter)
   const customGeminiProviders = providers.filter((p) => p.isCustom && p.type === ModelProviderType.Gemini)
 
   const openAIImageModels = useProviderImageModels(ModelProviderEnum.OpenAI, !!openAIProvider)
@@ -115,6 +140,7 @@ export function useImageModelGroups(): ImageModelGroup[] {
     !!geminiProvider || customGeminiProviders.length > 0
   )
   const xaiImageModels = useProviderImageModels(ModelProviderEnum.XAI, !!xaiProvider)
+  const openRouterImageModels = useOpenRouterImageModels(!!openRouterProvider)
 
   return useMemo(() => {
     const groups: ImageModelGroup[] = []
@@ -166,6 +192,23 @@ export function useImageModelGroups(): ImageModelGroup[] {
       }
     }
 
+    if (openRouterProvider) {
+      const manualModels = (providerSettingsMap?.[openRouterProvider.id]?.models || [])
+        .filter((model) => model.type === 'image')
+        .map(manualImageModelToOption)
+      const models = mergeImageModels(
+        openRouterImageModels.length
+          ? openRouterImageModels
+          : [{ modelId: 'bytedance-seed/seedream-4.5', displayName: 'Seedream 4.5' }],
+        manualModels
+      )
+      groups.push({
+        label: openRouterProvider.name,
+        providerId: openRouterProvider.id,
+        models,
+      })
+    }
+
     for (const provider of customGeminiProviders) {
       const manualModels = (providerSettingsMap?.[provider.id]?.models || [])
         .filter((model) => model.type === 'image')
@@ -201,11 +244,13 @@ export function useImageModelGroups(): ImageModelGroup[] {
     openAIProvider,
     geminiProvider,
     xaiProvider,
+    openRouterProvider,
     customGeminiProviders,
     providerSettingsMap,
     chatboxAIImageModels,
     openAIImageModels,
     geminiImageModels,
     xaiImageModels,
+    openRouterImageModels,
   ])
 }

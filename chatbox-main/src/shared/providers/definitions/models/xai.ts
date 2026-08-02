@@ -5,6 +5,8 @@ import { ApiError } from '../../../models/errors'
 import OpenAICompatible, { type OpenAICompatibleSettings } from '../../../models/openai-compatible'
 import type { CallChatCompletionOptions, NativeWebSearchConfig } from '../../../models/types'
 import { createFetchWithProxy } from '../../../models/utils/fetch-proxy'
+import { responseToVideoDataUrl } from '../../../models/video'
+import type { VideoGenerationInput, VideoGenerationJob } from '../../../types'
 import type { ModelDependencies } from '../../../types/adapters'
 import { normalizeOpenAIApiHostAndPath } from '../../../utils'
 
@@ -193,5 +195,78 @@ export default class XAI extends OpenAICompatible {
       throw new ApiError('xAI image generation returned no usable images')
     }
     return results
+  }
+
+  public async startVideoGeneration(params: VideoGenerationInput, signal?: AbortSignal): Promise<VideoGenerationJob> {
+    const body: Record<string, unknown> = {
+      model: this.options.model.modelId,
+      prompt: params.prompt,
+      duration: params.duration,
+      aspect_ratio: params.aspectRatio,
+      resolution: params.resolution,
+    }
+    if (params.image) body.image = { url: params.image.imageUrl }
+
+    const response = await this.dependencies.request.apiRequest({
+      url: `${this.options.apiHost}/videos/generations`,
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.options.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+      signal,
+      retry: 0,
+      useProxy: this.options.useProxy,
+    })
+    if (!response.ok) {
+      throw new ApiError(`xAI video generation failed (${response.status}): ${await response.text()}`)
+    }
+    const payload = (await response.json()) as { request_id?: string }
+    if (!payload.request_id) throw new ApiError('xAI returned no video request ID')
+    return { id: payload.request_id, status: 'pending' }
+  }
+
+  public async pollVideoGeneration(job: VideoGenerationJob, signal?: AbortSignal): Promise<VideoGenerationJob> {
+    const response = await this.dependencies.request.apiRequest({
+      url: `${this.options.apiHost}/videos/${encodeURIComponent(job.id)}`,
+      method: 'GET',
+      headers: { Authorization: `Bearer ${this.options.apiKey}` },
+      signal,
+      retry: 0,
+      useProxy: this.options.useProxy,
+    })
+    if (!response.ok) {
+      throw new ApiError(`xAI video status failed (${response.status}): ${await response.text()}`)
+    }
+    const payload = (await response.json()) as {
+      status?: string
+      video?: { url?: string }
+      progress?: number
+      error?: { message?: string } | string
+    }
+    const status: VideoGenerationJob['status'] =
+      payload.status === 'done'
+        ? 'completed'
+        : payload.status === 'failed'
+          ? 'failed'
+          : payload.status === 'expired'
+            ? 'expired'
+            : 'in_progress'
+    const error = typeof payload.error === 'string' ? payload.error : payload.error?.message
+    return { ...job, status, videoUrl: payload.video?.url, progress: payload.progress, error }
+  }
+
+  public async downloadVideo(job: VideoGenerationJob, signal?: AbortSignal) {
+    if (!job.videoUrl) throw new ApiError('xAI returned no video URL')
+    const response = await this.dependencies.request.apiRequest({
+      url: job.videoUrl,
+      method: 'GET',
+      headers: {},
+      signal,
+      retry: 0,
+      useProxy: this.options.useProxy,
+    })
+    return responseToVideoDataUrl(response)
   }
 }

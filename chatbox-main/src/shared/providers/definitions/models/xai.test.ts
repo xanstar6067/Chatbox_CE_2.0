@@ -137,4 +137,32 @@ describe('XAI', () => {
     expect(model.options.apiHost).toBe('https://proxy.example.com/xai/v1')
     expect(apiRequest.mock.calls[0][0].url).toBe('https://proxy.example.com/xai/v1/images/generations')
   })
+
+  it('starts and polls Grok video generation', async () => {
+    apiRequest
+      .mockResolvedValueOnce(new Response(JSON.stringify({ request_id: 'video-job-1' }), { status: 200 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ status: 'done', video: { url: 'https://vidgen.x.ai/video.mp4' }, progress: 100 }),
+          { status: 200 }
+        )
+      )
+    const model = createModel({ modelId: 'grok-imagine-video-1.5', type: 'video' })
+    const started = await model.startVideoGeneration({
+      prompt: 'Rocket launch',
+      duration: 10,
+      resolution: '1080p',
+      aspectRatio: '16:9',
+    })
+    const completed = await model.pollVideoGeneration(started)
+
+    expect(JSON.parse(apiRequest.mock.calls[0][0].body)).toEqual({
+      model: 'grok-imagine-video-1.5',
+      prompt: 'Rocket launch',
+      duration: 10,
+      aspect_ratio: '16:9',
+      resolution: '1080p',
+    })
+    expect(completed).toMatchObject({ status: 'completed', videoUrl: 'https://vidgen.x.ai/video.mp4' })
+  })
 })

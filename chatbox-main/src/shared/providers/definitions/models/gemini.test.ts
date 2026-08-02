@@ -90,6 +90,43 @@ describe('Gemini image generation', () => {
   })
 })
 
+describe('Gemini video generation', () => {
+  it('starts a Veo long-running operation with a base64 start frame', async () => {
+    const dependencies = createDependencies()
+    vi.mocked(dependencies.request.apiRequest).mockResolvedValueOnce(
+      new Response(JSON.stringify({ name: 'operations/veo-job-1' }), { status: 200 })
+    )
+    const model = new Gemini(
+      {
+        geminiAPIKey: 'gemini-test-key',
+        geminiAPIHost: 'https://generativelanguage.googleapis.com',
+        model: { modelId: 'veo-3.1-fast-generate-preview', type: 'video' },
+      },
+      dependencies
+    )
+
+    await expect(
+      model.startVideoGeneration({
+        prompt: 'A misty greenhouse',
+        image: { imageUrl: 'data:image/png;base64,AAAA' },
+        duration: 8,
+        resolution: '720p',
+        aspectRatio: '16:9',
+      })
+    ).resolves.toEqual({ id: 'operations/veo-job-1', status: 'pending' })
+
+    expect(JSON.parse(vi.mocked(dependencies.request.apiRequest).mock.calls[0][0].body as string)).toEqual({
+      instances: [
+        {
+          prompt: 'A misty greenhouse',
+          image: { inlineData: { mimeType: 'image/png', data: 'AAAA' } },
+        },
+      ],
+      parameters: { aspectRatio: '16:9', durationSeconds: '8', resolution: '720p', numberOfVideos: 1 },
+    })
+  })
+})
+
 describe('Gemini native web search', () => {
   it('uses Google Search when no custom tools are active', () => {
     const model = new Gemini(

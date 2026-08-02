@@ -29,6 +29,7 @@ const ModelEdit = NiceModal.create((props: { model?: ProviderModelInfo; provider
   const typeOptions = [
     { value: 'chat', label: t('Chat')?.toString() ?? 'Chat' },
     { value: 'image', label: t('Image')?.toString() ?? 'Image' },
+    { value: 'video', label: t('Video')?.toString() ?? 'Video' },
     { value: 'embedding', label: t('Embedding')?.toString() ?? 'Embedding' },
     { value: 'rerank', label: t('Rerank')?.toString() ?? 'Rerank' },
   ]

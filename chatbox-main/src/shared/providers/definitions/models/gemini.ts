@@ -4,7 +4,8 @@ import { generateText } from 'ai'
 import AbstractAISDKModel, { type CallSettings } from '../../../models/abstract-ai-sdk'
 import { ApiError } from '../../../models/errors'
 import type { CallChatCompletionOptions } from '../../../models/types'
-import type { ProviderModelInfo } from '../../../types'
+import { apiErrorMessage, responseToVideoDataUrl } from '../../../models/video'
+import type { ProviderModelInfo, VideoGenerationInput, VideoGenerationJob } from '../../../types'
 import type { ModelDependencies } from '../../../types/adapters'
 import { normalizeGoogleThinkingConfig } from '../../../utils/google-thinking'
 import { normalizeGeminiHost } from '../../../utils/llm_utils'
@@ -194,5 +195,92 @@ export default class Gemini extends AbstractAISDKModel {
         maxOutput: m.outputTokenLimit,
       }))
       .sort((a, b) => a.modelId.localeCompare(b.modelId))
+  }
+
+  public async startVideoGeneration(params: VideoGenerationInput, signal?: AbortSignal): Promise<VideoGenerationJob> {
+    const instance: Record<string, unknown> = { prompt: params.prompt }
+    if (params.image) {
+      const match = params.image.imageUrl.match(/^data:([^;]+);base64,(.+)$/s)
+      if (!match) throw new ApiError('Google Veo requires the start frame as a base64 data URL')
+      instance.image = { inlineData: { mimeType: match[1], data: match[2] } }
+    }
+
+    const response = await this.dependencies.request.apiRequest({
+      url: `${this.geminiApiBase()}/models/${encodeURIComponent(this.options.model.modelId)}:predictLongRunning`,
+      method: 'POST',
+      headers: {
+        'x-goog-api-key': this.options.geminiAPIKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        instances: [instance],
+        parameters: {
+          aspectRatio: params.aspectRatio,
+          durationSeconds: String(params.duration),
+          resolution: params.resolution,
+          numberOfVideos: 1,
+        },
+      }),
+      signal,
+      retry: 0,
+    })
+    if (!response.ok) {
+      throw new ApiError(`Google Veo generation failed (${response.status}): ${await response.text()}`)
+    }
+    const payload = (await response.json()) as { name?: string; error?: unknown }
+    if (!payload.name) throw new ApiError(apiErrorMessage(payload.error))
+    return { id: payload.name, status: 'pending' }
+  }
+
+  public async pollVideoGeneration(job: VideoGenerationJob, signal?: AbortSignal): Promise<VideoGenerationJob> {
+    const operationPath = job.id.replace(/^\/+/, '')
+    const response = await this.dependencies.request.apiRequest({
+      url: `${this.geminiApiBase()}/${operationPath}`,
+      method: 'GET',
+      headers: { 'x-goog-api-key': this.options.geminiAPIKey },
+      signal,
+      retry: 0,
+    })
+    if (!response.ok) {
+      throw new ApiError(`Google Veo status failed (${response.status}): ${await response.text()}`)
+    }
+    const payload = (await response.json()) as {
+      done?: boolean
+      error?: unknown
+      metadata?: { progressPercent?: number }
+      response?: {
+        generateVideoResponse?: { generatedSamples?: Array<{ video?: { uri?: string } }> }
+        generatedVideos?: Array<{ video?: { uri?: string } }>
+      }
+    }
+    if (payload.error) {
+      return { ...job, status: 'failed', error: apiErrorMessage(payload.error) }
+    }
+    const videoUrl =
+      payload.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri ||
+      payload.response?.generatedVideos?.[0]?.video?.uri
+    return {
+      ...job,
+      status: payload.done ? (videoUrl ? 'completed' : 'failed') : 'in_progress',
+      videoUrl,
+      progress: payload.metadata?.progressPercent,
+      error: payload.done && !videoUrl ? 'Google Veo completed without a video URL' : undefined,
+    }
+  }
+
+  public async downloadVideo(job: VideoGenerationJob, signal?: AbortSignal) {
+    if (!job.videoUrl) throw new ApiError('Google Veo returned no video URL')
+    const response = await this.dependencies.request.apiRequest({
+      url: job.videoUrl,
+      method: 'GET',
+      headers: { 'x-goog-api-key': this.options.geminiAPIKey },
+      signal,
+      retry: 0,
+    })
+    return responseToVideoDataUrl(response)
+  }
+
+  private geminiApiBase() {
+    return normalizeGeminiHost(this.options.geminiAPIHost).apiHost.replace(/\/$/, '')
   }
 }

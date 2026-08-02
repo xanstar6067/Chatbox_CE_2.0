@@ -1,4 +1,4 @@
-import type { CopilotDetail, Message, Session } from '@shared/types'
+import type { CopilotDetail, Message, Session, VideoGeneration } from '@shared/types'
 import { getCopilotsMediaStorageKeys } from '@/packages/copilot-media'
 import { StorageKeyGenerator } from '@/storage/StoreStorage'
 import { listSessionsMeta } from '@/stores/chatStore'
@@ -17,7 +17,7 @@ if (platform.type !== 'desktop') {
 
 export async function tickStorageTask() {
   const allBlobKeys = await storage.getBlobKeys()
-  const prefixes = ['picture:', 'file:', 'parseUrl-', 'parseFile-']
+  const prefixes = ['picture:', 'video:', 'file:', 'parseUrl-', 'parseFile-']
   const storageKeys = allBlobKeys.filter((key) => prefixes.some((prefix) => key.startsWith(prefix)))
   if (storageKeys.length === 0) {
     return
@@ -107,6 +107,13 @@ export async function tickStorageTask() {
   } catch (e) {
     console.error('storage_clear: failed to scan image generation storage', e)
     return
+  }
+
+  // Video Creator metadata lives in the main store; keep its downloaded clips and start frames.
+  const videoRecords = await storage.getItem<VideoGeneration[]>('video-generation-records', [])
+  for (const record of videoRecords) {
+    if (record.generatedVideo) needDeletedSet.delete(record.generatedVideo)
+    if (record.referenceImage) needDeletedSet.delete(record.referenceImage)
   }
   for (const key of needDeletedSet) {
     await storage.delBlob(key)

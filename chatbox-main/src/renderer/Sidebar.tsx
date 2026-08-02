@@ -10,6 +10,7 @@ import {
   IconMessageChatbot,
   IconPhotoPlus,
   IconSettingsFilled,
+  IconVideoPlus,
 } from '@tabler/icons-react'
 import { useNavigate } from '@tanstack/react-router'
 import clsx from 'clsx'
@@ -27,13 +28,12 @@ import { useIsSmallScreen, useSidebarWidth } from './hooks/useScreenChange'
 import useVersion from './hooks/useVersion'
 import { navigateToSettings } from './modals/Settings'
 import { trackingEvent } from './packages/event'
-import platform from './platform'
-import { featureFlags } from './utils/feature-flags'
 import icon from './static/icon.png'
 import { settingsStore, useLanguage } from './stores/settingsStore'
 import { taskSessionStore } from './stores/taskSessionStore'
 import { useUIStore } from './stores/uiStore'
 import { installUpdate, useUpdateStore } from './stores/updateStore'
+import { featureFlags } from './utils/feature-flags'
 import { CHATBOX_BUILD_PLATFORM, CHATBOX_BUILD_TARGET } from './variables'
 
 export default function Sidebar() {
@@ -77,6 +77,14 @@ export default function Sidebar() {
       setShowSidebar(false)
     }
     trackingEvent('open_image_creator', { event_category: 'user' })
+  }, [isSmallScreen, setShowSidebar, navigate])
+
+  const handleCreateNewVideoSession = useCallback(() => {
+    navigate({ to: '/video-creator' })
+    if (isSmallScreen) {
+      setShowSidebar(false)
+    }
+    trackingEvent('open_video_creator', { event_category: 'user' })
   }, [isSmallScreen, setShowSidebar, navigate])
 
   const handleCreateNewTask = useCallback(() => {
@@ -243,6 +251,10 @@ export default function Sidebar() {
                 >
                   <ScalableIcon icon={IconPhotoPlus} className="mr-2" />
                   {t('Create Image')}
+                </Button>
+                <Button variant="light" fullWidth data-testid="new-video-button" onClick={handleCreateNewVideoSession}>
+                  <ScalableIcon icon={IconVideoPlus} className="mr-2" />
+                  {t('Create Video')}
                 </Button>
               </>
             )}
