@@ -6,6 +6,7 @@ import { IconAlertCircle, IconCheck, IconChevronDown, IconPlayerPlay, IconRefres
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AdaptiveModal } from '@/components/common/AdaptiveModal'
+import { DiffHighlightedTextarea } from '@/components/common/DiffHighlightedTextarea'
 import { ScalableIcon } from '@/components/common/ScalableIcon'
 import ProviderImageIcon from '@/components/icons/ProviderImageIcon'
 import ModelSelector from '@/components/ModelSelector'
@@ -215,7 +216,7 @@ function MessageRefinementModal({
           disabled={isRunning}
         />
 
-        <Textarea
+        <DiffHighlightedTextarea
           label={t('Result preview')}
           description={t('Only this message is sent to the selected model; chat history is not included.')}
           placeholder={
@@ -223,12 +224,11 @@ function MessageRefinementModal({
               ? t('The model is correcting the text…') || ''
               : t('Run the correction to see and edit the result here.') || ''
           }
+          originalText={sourceText}
           value={preview}
-          onChange={(event) => setPreview(event.currentTarget.value)}
-          autosize
-          minRows={7}
-          maxRows={16}
+          onChange={setPreview}
           readOnly={!preview || isRunning}
+          showChanges={!!preview && !isRunning}
         />
 
         {!!error && (
