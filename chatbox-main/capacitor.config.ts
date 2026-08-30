@@ -11,6 +11,9 @@ const config: CapacitorConfig = {
     adjustMarginsForEdgeToEdge: 'auto',
   },
   plugins: {
+    Keyboard: {
+      resizeOnFullScreen: true,
+    },
     CapacitorSQLite: {
       // Chatbox opens every mobile database with `no-encryption`. Leaving the
       // plugin default enabled creates an unused Keystore-backed preference
