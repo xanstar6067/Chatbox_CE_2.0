@@ -187,7 +187,6 @@
     "big.js": "^7.0.1",
     "browserslist-config-erb": "^0.0.3",
     "canvas-confetti": "^1.9.4",
-    "capacitor-plugin-safe-area": "^5.0.1",
     "capacitor-stream-http": "0.1.0",
     "chalk": "^4.1.2",
     "class-variance-authority": "^0.7.0",

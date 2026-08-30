@@ -425,9 +425,6 @@ importers:
       canvas-confetti:
         specifier: ^1.9.4
         version: 1.9.4
-      capacitor-plugin-safe-area:
-        specifier: ^5.0.1
-        version: 5.0.1(@capacitor/core@8.5.0)
       capacitor-stream-http:
         specifier: 0.1.0
         version: 0.1.0(patch_hash=1223c5e7d5976c33f4a7191be8596b2e26e2fd099da8d01c53d4d256d9a12895)(@capacitor/core@8.5.0)
@@ -6469,11 +6466,6 @@ packages:
 
   canvas-confetti@1.9.4:
     resolution: {integrity: sha512-yxQbJkAVrFXWNbTUjPqjF7G+g6pDotOUHGbkZq2NELZUMDpiJ85rIEazVb8GTaAptNW2miJAXbs1BtioA251Pw==}
-
-  capacitor-plugin-safe-area@5.0.1:
-    resolution: {integrity: sha512-DLSCFpvSkYJk4FaVHD0/xbRjdVN7GsBbdoYWmHr7h/LvuO4Q8VW+1ftzMzH3ScIMIydy2DuRYrn+GORnlESBxw==}
-    peerDependencies:
-      '@capacitor/core': '>=8.0.0'
 
   capacitor-stream-http@0.1.0:
     resolution: {integrity: sha512-BPRI9ZZlynE0pVGyxuCbkOLjPIDXvvDQmDCK+ahw1FmknGyRkkIZRMDE4hDSi5WRLJ137ZJgA1LAdgap2GWNEw==}
@@ -20831,10 +20823,6 @@ snapshots:
   caniuse-lite@1.0.30001767: {}
 
   canvas-confetti@1.9.4: {}
-
-  capacitor-plugin-safe-area@5.0.1(@capacitor/core@8.5.0):
-    dependencies:
-      '@capacitor/core': 8.5.0
 
   capacitor-stream-http@0.1.0(patch_hash=1223c5e7d5976c33f4a7191be8596b2e26e2fd099da8d01c53d4d256d9a12895)(@capacitor/core@8.5.0):
     dependencies:

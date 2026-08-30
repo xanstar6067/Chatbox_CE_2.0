@@ -19,7 +19,6 @@ dependencies {
     implementation project(':capacitor-share')
     implementation project(':capacitor-splash-screen')
     implementation project(':capacitor-toast')
-    implementation project(':capacitor-plugin-safe-area')
     implementation project(':capacitor-stream-http')
 
 }

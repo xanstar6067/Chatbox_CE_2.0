@@ -32,8 +32,5 @@ project(':capacitor-splash-screen').projectDir = new File('../node_modules/@capa
 include ':capacitor-toast'
 project(':capacitor-toast').projectDir = new File('../node_modules/@capacitor/toast/android')
 
-include ':capacitor-plugin-safe-area'
-project(':capacitor-plugin-safe-area').projectDir = new File('../node_modules/capacitor-plugin-safe-area/android')
-
 include ':capacitor-stream-http'
 project(':capacitor-stream-http').projectDir = new File('../node_modules/capacitor-stream-http/android')

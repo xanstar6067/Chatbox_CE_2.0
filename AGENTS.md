@@ -18,6 +18,13 @@
 - Use current AndroidX inset APIs when custom handling is necessary; do not use deprecated APIs, fixed device offsets, or hard-coded keyboard heights.
 - Do not add dependencies, change SDK/package versions, or refactor shared UI without evidence that the task requires it.
 
+## Current Android toolchain baseline
+
+- Keep the project on the verified Capacitor 8 toolchain unless a newer combination is validated together: Capacitor 8.5, Android Gradle Plugin 8.13.2, Gradle 8.14.5, Kotlin 2.2.20, compile/target SDK 36, and minimum SDK 24.
+- Gradle runs on the Java 21 daemon toolchain declared in `chatbox-main/android/gradle/gradle-daemon-jvm.properties`; Android Studio's Java 25 runtime is not compatible with Gradle 8.14.x.
+- `chatbox-main/android/settings.gradle` applies the Foojay toolchain resolver used by the daemon JVM criteria. Preserve these files when syncing or upgrading Android.
+- Upgrade AGP, Gradle, Kotlin, Capacitor, and the JDK as a compatible set and confirm the combination with `mobile:sync:android` followed by `mobile:build:android`.
+
 ## Required web-to-Android synchronization
 
 - **The Android app embeds the compiled shared web UI. Every relevant web/React/CSS change must be made in `chatbox-main/src/renderer/` and synchronized into Android before considering the task complete.**
