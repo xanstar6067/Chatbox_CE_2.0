@@ -141,7 +141,12 @@ export const MobileModelSelector = forwardRef<HTMLDivElement, MobileModelSelecto
         <Drawer.Portal>
           <Drawer.Overlay className="fixed inset-0 bg-chatbox-background-mask-overlay" />
           <Drawer.Content className="flex flex-col rounded-t-[10px] h-fit fixed bottom-0 left-0 right-0 outline-none">
-            <Stack gap={0} className="bg-chatbox-background-primary rounded-t-lg h-[85vh]">
+            <Stack
+              gap={0}
+              className="bg-chatbox-background-primary rounded-t-lg h-[85vh] box-border"
+              // The drawer is portaled outside .App, so reserve its own system-bar space.
+              style={{ paddingBottom: 'var(--mobile-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))' }}
+            >
               <div aria-hidden className="mx-auto w-16 h-1 flex-shrink-0 rounded-full bg-chatbox-tint-tertiary my-3" />
               <Drawer.Title className="hidden">{t('Select Model')}</Drawer.Title>
               <Tabs value={activeTab} onChange={onTabChange}>
@@ -246,13 +251,13 @@ export const MobileModelSelector = forwardRef<HTMLDivElement, MobileModelSelecto
                       )
                     })}
 
-                    <div className="h-[--mobile-safe-area-inset-bottom] min-h-4" />
+                    <div aria-hidden className="h-4 shrink-0" />
                   </Stack>
 
                   {/* Favorite Tab Content */}
                   <Stack gap="md" className="px-2 h-full overflow-y-auto scrollbar-none">
                     {renderFavoriteTab()}
-                    <div className="h-[--mobile-safe-area-inset-bottom] min-h-4" />
+                    <div aria-hidden className="h-4 shrink-0" />
                   </Stack>
                 </SwipeableViews>
               </Stack>
