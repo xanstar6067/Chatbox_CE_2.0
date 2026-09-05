@@ -1,6 +1,6 @@
-import { Box, Input } from '@mantine/core'
-import { type ChangeEvent, type UIEvent, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { cn } from '@/lib/utils'
+import { Box, Button, Input } from '@mantine/core'
+import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getCorrectionDiffParts } from '@/services/messageRefinementDiff'
 
 const MIN_HEIGHT = 174
@@ -25,48 +25,69 @@ export function DiffHighlightedTextarea({
   showChanges: boolean
   onChange(value: string): void
 }) {
+  const { t } = useTranslation()
+  const id = useId()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const overlayTextRef = useRef<HTMLDivElement>(null)
-  const [focused, setFocused] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const isEditing = editing && !readOnly
+  // `value` is the plain replacement buffer. Diff markup exists only in the preview.
   const parts = useMemo(
     () => (showChanges ? getCorrectionDiffParts(originalText, value) : [{ value, changed: false }]),
     [originalText, showChanges, value]
   )
 
   useLayoutEffect(() => {
+    if (readOnly) setEditing(false)
+  }, [readOnly])
+
+  useLayoutEffect(() => {
     void value
+    void isEditing
     const textarea = textareaRef.current
     if (!textarea) return
     textarea.style.height = 'auto'
     textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, MIN_HEIGHT), MAX_HEIGHT)}px`
-  }, [value])
+  }, [value, isEditing])
 
-  const syncScroll = (event: UIEvent<HTMLTextAreaElement>) => {
-    if (overlayTextRef.current) {
-      overlayTextRef.current.style.transform = `translate(${-event.currentTarget.scrollLeft}px, ${-event.currentTarget.scrollTop}px)`
-    }
-  }
-
-  const handleChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-    onChange(event.currentTarget.value)
-  }
+  useLayoutEffect(() => {
+    if (isEditing) textareaRef.current?.focus()
+  }, [isEditing])
 
   return (
-    <Input.Wrapper label={label} description={description}>
+    <Input.Wrapper id={id} label={label} description={description}>
+      {!readOnly && (
+        <Button size="compact-xs" variant="subtle" mt={5} onClick={() => setEditing(!isEditing)}>
+          {isEditing ? t('Preview') : t('Edit')}
+        </Button>
+      )}
       <Box
         mt={5}
-        className={cn(
-          'relative overflow-hidden rounded-md border border-solid bg-chatbox-background-primary',
-          focused ? 'border-chatbox-border-brand' : 'border-chatbox-border-primary'
-        )}
+        className="overflow-hidden rounded-md border border-solid border-chatbox-border-primary bg-chatbox-background-primary focus-within:border-chatbox-border-brand"
       >
-        {!!value && (
-          <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-            <div
-              ref={overlayTextRef}
-              className="box-border min-h-full w-full whitespace-pre-wrap break-words px-[11px] py-[8px] text-sm leading-[1.55] text-transparent"
-            >
-              {parts.map((part, index) => (
+        {isEditing ? (
+          <textarea
+            id={id}
+            ref={textareaRef}
+            aria-label={label}
+            aria-describedby={`${id}-description`}
+            placeholder={placeholder}
+            value={value}
+            onChange={(event) => onChange(event.currentTarget.value)}
+            className="box-border block w-full resize-none border-0 bg-transparent px-[11px] py-[8px] text-sm leading-[1.55] text-chatbox-tint-primary outline-none placeholder:text-chatbox-tint-tertiary"
+            style={{ minHeight: MIN_HEIGHT, maxHeight: MAX_HEIGHT }}
+          />
+        ) : (
+          <div
+            id={id}
+            role="region"
+            aria-label={label}
+            aria-describedby={`${id}-description`}
+            tabIndex={0}
+            className="box-border w-full overflow-y-auto whitespace-pre-wrap break-words px-[11px] py-[8px] text-sm leading-[1.55] text-chatbox-tint-primary"
+            style={{ minHeight: MIN_HEIGHT, maxHeight: MAX_HEIGHT }}
+          >
+            {value ? (
+              parts.map((part, index) => (
                 <span
                   key={`${index}-${part.changed}`}
                   className={
@@ -77,27 +98,12 @@ export function DiffHighlightedTextarea({
                 >
                   {part.value}
                 </span>
-              ))}
-            </div>
+              ))
+            ) : (
+              <span className="text-chatbox-tint-tertiary">{placeholder}</span>
+            )}
           </div>
         )}
-        <textarea
-          ref={textareaRef}
-          aria-label={label}
-          placeholder={placeholder}
-          value={value}
-          readOnly={readOnly}
-          onChange={handleChange}
-          onScroll={syncScroll}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          className={cn(
-            'relative z-[1] box-border block w-full resize-none border-0 bg-transparent px-[11px] py-[8px]',
-            'text-sm leading-[1.55] text-chatbox-tint-primary outline-none placeholder:text-chatbox-tint-tertiary',
-            readOnly ? 'cursor-default' : ''
-          )}
-          style={{ minHeight: MIN_HEIGHT, maxHeight: MAX_HEIGHT }}
-        />
       </Box>
     </Input.Wrapper>
   )
