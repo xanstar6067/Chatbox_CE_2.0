@@ -1,11 +1,8 @@
 import type { CallChatCompletionOptions } from '@shared/models/types'
-import { ProviderOptionsSchema, type ProviderModelInfo } from '@shared/types'
+import { type ProviderModelInfo, ProviderOptionsSchema } from '@shared/types'
 import type { ModelDependencies } from '@shared/types/adapters'
-import {
-  getDefaultXAIReasoningEffort,
-  getSupportedXAIReasoningEfforts,
-} from '@shared/utils/xai-thinking'
 import type { SentryScope } from '@shared/utils/sentry_adapter'
+import { getDefaultXAIReasoningEffort, getSupportedXAIReasoningEfforts } from '@shared/utils/xai-thinking'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import XAI, { isXaiMultiAgentModel } from './xai'
 

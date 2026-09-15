@@ -29,13 +29,13 @@ import {
   getSupportedGoogleThinkingLevels,
 } from '@shared/utils/google-thinking'
 import {
-  type XAIReasoningEffort,
   getDefaultXAIReasoningEffort,
   getSupportedXAIReasoningEfforts,
+  type XAIReasoningEffort,
 } from '@shared/utils/xai-thinking'
 import { IconInfoCircle, IconTrash, IconUpload } from '@tabler/icons-react'
 import { pick } from 'lodash'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AdaptiveModal } from '@/components/common/AdaptiveModal'
 import { AssistantAvatar } from '@/components/common/Avatar'
@@ -519,7 +519,7 @@ interface ThinkingLevelConfigProps<T extends string> {
   supportedLevels: T[]
   onLevelChange: (thinkingLevel: T) => void
   tooltipText: string
-  label?: string
+  label?: ReactNode
 }
 
 function ThinkingLevelConfig<T extends string>({
@@ -538,14 +538,14 @@ function ThinkingLevelConfig<T extends string>({
           level === 'none'
             ? t('Disabled')
             : level === 'minimal'
-            ? t('Minimal')
-            : level === 'low'
-              ? t('Low')
-              : level === 'medium'
-                ? t('Medium')
-                : level === 'high'
-                  ? t('High')
-                  : level.toUpperCase(),
+              ? t('Minimal')
+              : level === 'low'
+                ? t('Low')
+                : level === 'medium'
+                  ? t('Medium')
+                  : level === 'high'
+                    ? t('High')
+                    : level.toUpperCase(),
         value: level,
       })),
     [supportedLevels, t]

@@ -10,10 +10,7 @@ import { responseToVideoDataUrl } from '../../../models/video'
 import type { VideoGenerationInput, VideoGenerationJob } from '../../../types'
 import type { ModelDependencies } from '../../../types/adapters'
 import { normalizeOpenAIApiHostAndPath } from '../../../utils'
-import {
-  type XAIReasoningEffort,
-  normalizeXAIReasoningEffort,
-} from '../../../utils/xai-thinking'
+import { normalizeXAIReasoningEffort, type XAIReasoningEffort } from '../../../utils/xai-thinking'
 
 interface Options extends OpenAICompatibleSettings {}
 
