@@ -118,6 +118,10 @@ const OpenAIParamsSchema = z.object({
   reasoningEffort: z.enum(['low', 'medium', 'high']).optional().catch(undefined),
 })
 
+const XAIParamsSchema = z.object({
+  reasoningEffort: z.enum(['none', 'low', 'medium', 'high', 'xhigh']).optional().catch(undefined),
+})
+
 const GoogleParamsSchema = z.object({
   thinkingConfig: z.object({
     thinkingBudget: z.number().optional().catch(undefined),
@@ -129,6 +133,7 @@ const GoogleParamsSchema = z.object({
 export const ProviderOptionsSchema = z.object({
   claude: ClaudeParamsSchema.optional(),
   openai: OpenAIParamsSchema.optional(),
+  xai: XAIParamsSchema.optional(),
   google: GoogleParamsSchema.optional(),
 })
 
@@ -447,6 +452,7 @@ export type BuiltinProviderBaseInfo = z.infer<typeof BuiltinProviderBaseInfoSche
 export type CustomProviderBaseInfo = z.infer<typeof CustomProviderBaseInfoSchema>
 export type ClaudeParams = z.infer<typeof ClaudeParamsSchema>
 export type OpenAIParams = z.infer<typeof OpenAIParamsSchema>
+export type XAIParams = z.infer<typeof XAIParamsSchema>
 export type GoogleParams = z.infer<typeof GoogleParamsSchema>
 export type ProviderOptions = z.infer<typeof ProviderOptionsSchema>
 export type GlobalSessionSettings = z.infer<typeof GlobalSessionSettingsSchema>

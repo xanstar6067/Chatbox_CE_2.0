@@ -1,6 +1,10 @@
 import type { CallChatCompletionOptions } from '@shared/models/types'
-import type { ProviderModelInfo } from '@shared/types'
+import { ProviderOptionsSchema, type ProviderModelInfo } from '@shared/types'
 import type { ModelDependencies } from '@shared/types/adapters'
+import {
+  getDefaultXAIReasoningEffort,
+  getSupportedXAIReasoningEfforts,
+} from '@shared/utils/xai-thinking'
 import type { SentryScope } from '@shared/utils/sentry_adapter'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import XAI, { isXaiMultiAgentModel } from './xai'
@@ -164,5 +168,98 @@ describe('XAI', () => {
       resolution: '1080p',
     })
     expect(completed).toMatchObject({ status: 'completed', videoUrl: 'https://vidgen.x.ai/video.mp4' })
+  })
+
+  it('parses xAI reasoning effort in provider options', () => {
+    expect(ProviderOptionsSchema.parse({ xai: { reasoningEffort: 'xhigh' } })).toEqual({
+      xai: { reasoningEffort: 'xhigh' },
+    })
+    expect(ProviderOptionsSchema.parse({ xai: { reasoningEffort: 'none' } })).toEqual({
+      xai: { reasoningEffort: 'none' },
+    })
+  })
+
+  it('exposes model-specific xAI reasoning effort levels', () => {
+    expect(getSupportedXAIReasoningEfforts('grok-4.3')).toEqual(['none', 'low', 'medium', 'high', 'xhigh'])
+    expect(getDefaultXAIReasoningEffort('grok-4.3')).toBe('low')
+
+    expect(getSupportedXAIReasoningEfforts('grok-4.5')).toEqual(['low', 'medium', 'high'])
+    expect(getDefaultXAIReasoningEffort('grok-4.5')).toBe('high')
+
+    expect(getSupportedXAIReasoningEfforts('grok-4.6')).toEqual(['low', 'medium', 'high', 'xhigh'])
+    expect(getDefaultXAIReasoningEffort('grok-4.6')).toBe('high')
+
+    expect(getSupportedXAIReasoningEfforts('grok-4-1-fast-non-reasoning')).toEqual([])
+  })
+
+  it('passes xAI reasoning effort through Chat Completions provider options', () => {
+    const model = createModel({
+      modelId: 'grok-4.6',
+      capabilities: ['reasoning', 'tool_use'],
+    })
+
+    expect(
+      model.exposeCallSettings({
+        providerOptions: {
+          xai: { reasoningEffort: 'xhigh' },
+        },
+      })
+    ).toEqual({
+      temperature: 0.7,
+      topP: 0.9,
+      maxOutputTokens: 4096,
+      providerOptions: {
+        xai: {
+          reasoningEffort: 'xhigh',
+        },
+      },
+    })
+  })
+
+  it('passes xAI reasoning effort through Responses API provider options', () => {
+    const model = createModel({
+      modelId: 'grok-4.6',
+      capabilities: ['reasoning', 'tool_use'],
+    })
+
+    expect(
+      model.exposeCallSettings({
+        webSearchMode: 'model',
+        providerOptions: {
+          xai: { reasoningEffort: 'low' },
+        },
+      })
+    ).toEqual({
+      providerOptions: {
+        openai: {
+          reasoningEffort: 'low',
+          store: false,
+        },
+      },
+    })
+  })
+
+  it('falls back to legacy OpenAI reasoning effort for saved xAI sessions', () => {
+    const model = createModel({
+      modelId: 'grok-4.5',
+      capabilities: ['reasoning', 'tool_use'],
+    })
+
+    expect(
+      model.exposeCallSettings({
+        providerOptions: {
+          openai: { reasoningEffort: 'medium' },
+        },
+      })
+    ).toEqual({
+      temperature: 0.7,
+      topP: 0.9,
+      maxOutputTokens: 4096,
+      providerOptions: {
+        xai: {
+          reasoningEffort: 'medium',
+        },
+      },
+    })
   })
 })

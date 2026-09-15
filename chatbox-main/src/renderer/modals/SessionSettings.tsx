@@ -28,6 +28,11 @@ import {
   getGoogleThinkingMode,
   getSupportedGoogleThinkingLevels,
 } from '@shared/utils/google-thinking'
+import {
+  type XAIReasoningEffort,
+  getDefaultXAIReasoningEffort,
+  getSupportedXAIReasoningEfforts,
+} from '@shared/utils/xai-thinking'
 import { IconInfoCircle, IconTrash, IconUpload } from '@tabler/icons-react'
 import { pick } from 'lodash'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -509,27 +514,38 @@ function ThinkingBudgetConfig({
   )
 }
 
-interface ThinkingLevelConfigProps {
-  currentLevel: GoogleThinkingLevel
-  supportedLevels: GoogleThinkingLevel[]
-  onLevelChange: (thinkingLevel: GoogleThinkingLevel) => void
+interface ThinkingLevelConfigProps<T extends string> {
+  currentLevel: T
+  supportedLevels: T[]
+  onLevelChange: (thinkingLevel: T) => void
   tooltipText: string
+  label?: string
 }
 
-function ThinkingLevelConfig({ currentLevel, supportedLevels, onLevelChange, tooltipText }: ThinkingLevelConfigProps) {
+function ThinkingLevelConfig<T extends string>({
+  currentLevel,
+  supportedLevels,
+  onLevelChange,
+  tooltipText,
+  label,
+}: ThinkingLevelConfigProps<T>) {
   const { t } = useTranslation()
 
   const thinkingLevelOptions = useMemo(
     () =>
       supportedLevels.map((level) => ({
         label:
-          level === 'minimal'
+          level === 'none'
+            ? t('Disabled')
+            : level === 'minimal'
             ? t('Minimal')
             : level === 'low'
               ? t('Low')
               : level === 'medium'
                 ? t('Medium')
-                : t('High'),
+                : level === 'high'
+                  ? t('High')
+                  : level.toUpperCase(),
         value: level,
       })),
     [supportedLevels, t]
@@ -537,7 +553,7 @@ function ThinkingLevelConfig({ currentLevel, supportedLevels, onLevelChange, too
 
   const handleThinkingLevelChange = useCallback(
     (value: string) => {
-      onLevelChange(value as GoogleThinkingLevel)
+      onLevelChange(value as T)
     },
     [onLevelChange]
   )
@@ -546,7 +562,7 @@ function ThinkingLevelConfig({ currentLevel, supportedLevels, onLevelChange, too
     <Stack gap="md" style={{ minWidth: 0 }}>
       <Flex align="center" gap="xs">
         <Text size="sm" fw="600">
-          {t('Thinking Level')}
+          {label || t('Thinking Level')}
         </Text>
         <Tooltip
           label={tooltipText}
@@ -753,6 +769,58 @@ function GoogleProviderConfig({
   )
 }
 
+function XAIProviderConfig({
+  settings,
+  onSettingsChange,
+}: {
+  settings: SessionSettings
+  onSettingsChange: (data: Session['settings']) => void
+}) {
+  const { t } = useTranslation()
+  const modelId = settings?.modelId || ''
+  const providerOptions = settings?.providerOptions?.xai
+  const legacyOpenAIOptions = settings?.providerOptions?.openai
+  const supportedLevels = useMemo(() => getSupportedXAIReasoningEfforts(modelId), [modelId])
+
+  const handleReasoningEffortChange = useCallback(
+    (reasoningEffort: XAIReasoningEffort) => {
+      onSettingsChange({
+        providerOptions: {
+          xai: { reasoningEffort },
+        },
+      })
+    },
+    [onSettingsChange]
+  )
+
+  const currentReasoningEffort = useMemo(() => {
+    if (supportedLevels.length === 0) {
+      return undefined
+    }
+
+    const savedReasoningEffort = providerOptions?.reasoningEffort ?? legacyOpenAIOptions?.reasoningEffort
+    if (savedReasoningEffort && supportedLevels.includes(savedReasoningEffort as XAIReasoningEffort)) {
+      return savedReasoningEffort as XAIReasoningEffort
+    }
+
+    return getDefaultXAIReasoningEffort(modelId)
+  }, [legacyOpenAIOptions?.reasoningEffort, modelId, providerOptions?.reasoningEffort, supportedLevels])
+
+  if (!currentReasoningEffort) {
+    return null
+  }
+
+  return (
+    <ThinkingLevelConfig
+      currentLevel={currentReasoningEffort}
+      supportedLevels={supportedLevels}
+      onLevelChange={handleReasoningEffortChange}
+      label={t('Thinking Effort')}
+      tooltipText={t('Thinking Effort only works for supported Grok reasoning models')}
+    />
+  )
+}
+
 export function ChatConfig({
   settings,
   onSettingsChange,
@@ -861,6 +929,9 @@ export function ChatConfig({
       )}
       {settings?.provider === ModelProviderEnum.Gemini && (
         <GoogleProviderConfig settings={settings} onSettingsChange={onSettingsChange} />
+      )}
+      {settings?.provider === ModelProviderEnum.XAI && (
+        <XAIProviderConfig settings={settings} onSettingsChange={onSettingsChange} />
       )}
     </Stack>
   )

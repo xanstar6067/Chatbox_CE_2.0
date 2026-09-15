@@ -1,4 +1,5 @@
 import { createOpenAI, type OpenAIResponsesProviderOptions } from '@ai-sdk/openai'
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import { extractReasoningMiddleware, type ToolSet, wrapLanguageModel } from 'ai'
 import type { CallSettings } from '../../../models/abstract-ai-sdk'
 import { ApiError } from '../../../models/errors'
@@ -9,6 +10,10 @@ import { responseToVideoDataUrl } from '../../../models/video'
 import type { VideoGenerationInput, VideoGenerationJob } from '../../../types'
 import type { ModelDependencies } from '../../../types/adapters'
 import { normalizeOpenAIApiHostAndPath } from '../../../utils'
+import {
+  type XAIReasoningEffort,
+  normalizeXAIReasoningEffort,
+} from '../../../utils/xai-thinking'
 
 interface Options extends OpenAICompatibleSettings {}
 
@@ -60,6 +65,15 @@ export default class XAI extends OpenAICompatible {
     return isXaiMultiAgentModel(this.options.model.modelId) || options.webSearchMode === 'model'
   }
 
+  protected getProvider() {
+    return createOpenAICompatible({
+      name: 'xai',
+      apiKey: this.options.apiKey,
+      baseURL: this.options.apiHost,
+      fetch: createFetchWithProxy(this.options.useProxy, this.dependencies),
+    })
+  }
+
   private getResponsesProvider() {
     return createOpenAI({
       apiKey: this.options.apiKey,
@@ -82,17 +96,40 @@ export default class XAI extends OpenAICompatible {
     }
   }
 
+  private getReasoningEffort(options: CallChatCompletionOptions): XAIReasoningEffort | undefined {
+    const requestedEffort =
+      options.providerOptions?.xai?.reasoningEffort ?? options.providerOptions?.openai?.reasoningEffort
+
+    return normalizeXAIReasoningEffort(this.options.model.modelId, requestedEffort)
+  }
+
   protected getCallSettings(options: CallChatCompletionOptions = {}): CallSettings {
     if (!this.usesResponsesAPI(options)) {
-      return super.getCallSettings()
+      const callSettings = super.getCallSettings()
+      const reasoningEffort = this.getReasoningEffort(options)
+
+      if (!reasoningEffort) {
+        return callSettings
+      }
+
+      return {
+        ...callSettings,
+        providerOptions: {
+          ...(callSettings.providerOptions || {}),
+          xai: {
+            ...(callSettings.providerOptions?.xai || {}),
+            reasoningEffort,
+          },
+        },
+      }
     }
 
-    const requestedEffort = options.providerOptions?.openai?.reasoningEffort
+    const reasoningEffort = this.getReasoningEffort(options)
     const providerOptions: OpenAIResponsesProviderOptions = {
       store: false,
     }
-    if (requestedEffort || isXaiMultiAgentModel(this.options.model.modelId)) {
-      providerOptions.reasoningEffort = requestedEffort || 'low'
+    if (reasoningEffort) {
+      providerOptions.reasoningEffort = reasoningEffort
     }
     return {
       // xAI server-side tools run through Responses. Avoid Chat Completions-only
