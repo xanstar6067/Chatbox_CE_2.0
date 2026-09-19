@@ -204,6 +204,38 @@ describe('processStreamChunk', () => {
     })
   })
 
+  it('renders Gemini built-in tool invocations with the native tool UI names', async () => {
+    let state = createInitialState(undefined, 'Google Search')
+    for (const item of [
+      chunk('tool-call', {
+        toolCallId: 'srv1',
+        toolName: 'server:GOOGLE_SEARCH_WEB',
+        input: { queries: ['chatbox'] },
+        providerExecuted: true,
+        dynamic: true,
+      }),
+      chunk('tool-result', { toolCallId: 'srv1', toolName: 'server:GOOGLE_SEARCH_WEB', output: {} }),
+      chunk('tool-call', {
+        toolCallId: 'srv2',
+        toolName: 'server:URL_CONTEXT',
+        input: {},
+        providerExecuted: true,
+        dynamic: true,
+      }),
+      chunk('tool-call', { toolCallId: 'fn1', toolName: 'server:GOOGLE_SEARCH_WEB', input: {} }),
+    ]) {
+      state = (await processStreamChunk(item, state, callbacks)).state
+    }
+
+    expect(state.contentParts.map((part) => (part.type === 'tool-call' ? part.toolName : part.type))).toEqual([
+      'web_search',
+      'parse_link',
+      // Client-side function tools keep their own names even if they look like server tools.
+      'server:GOOGLE_SEARCH_WEB',
+    ])
+    expect(state.contentParts[0]).toMatchObject({ state: 'result', providerExecuted: true })
+  })
+
   it('handles tool-error by updating existing tool-call', async () => {
     const state = createInitialState()
     const r1 = await processStreamChunk(

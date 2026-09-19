@@ -12,17 +12,18 @@ export const xaiProvider = defineProvider({
     'grok-4.6',
     'grok-4.5',
     'grok-4.3',
+    'grok-4.20-0309-reasoning',
+    'grok-4.20-0309-non-reasoning',
     'grok-4.20-multi-agent',
-    'grok-4-1-fast',
-    'grok-4-1-fast-non-reasoning',
-    'grok-4-fast',
-    'grok-4',
+    'grok-build-0.1',
   ],
   urls: {
     website: 'https://x.ai/',
   },
   defaultSettings: {
     apiHost: 'https://api.x.ai',
+    // https://docs.x.ai/developers/models
+    // grok-4, grok-4-fast and grok-4-1-fast were retired on 2026-05-15 and now redirect to grok-4.3.
     models: [
       {
         modelId: 'grok-4.6',
@@ -40,9 +41,16 @@ export const xaiProvider = defineProvider({
         capabilities: ['vision', 'tool_use', 'reasoning'],
       },
       {
-        modelId: 'grok-4',
-        contextWindow: 256_000,
+        modelId: 'grok-4.20-0309-reasoning',
+        nickname: 'Grok 4.20 Reasoning',
+        contextWindow: 1_000_000,
         capabilities: ['vision', 'tool_use', 'reasoning'],
+      },
+      {
+        modelId: 'grok-4.20-0309-non-reasoning',
+        nickname: 'Grok 4.20',
+        contextWindow: 1_000_000,
+        capabilities: ['vision', 'tool_use'],
       },
       {
         modelId: 'grok-4.20-multi-agent',
@@ -51,19 +59,10 @@ export const xaiProvider = defineProvider({
         capabilities: ['vision', 'reasoning'],
       },
       {
-        modelId: 'grok-4-fast',
-        contextWindow: 2_000_000,
+        modelId: 'grok-build-0.1',
+        nickname: 'Grok Build',
+        contextWindow: 256_000,
         capabilities: ['vision', 'tool_use', 'reasoning'],
-      },
-      {
-        modelId: 'grok-4-1-fast',
-        contextWindow: 2_000_000,
-        capabilities: ['vision', 'tool_use', 'reasoning'],
-      },
-      {
-        modelId: 'grok-4-1-fast-non-reasoning',
-        contextWindow: 2_000_000,
-        capabilities: ['vision', 'tool_use'],
       },
       ...KNOWN_XAI_IMAGE_MODELS.map((model) => ({
         modelId: model.modelId,

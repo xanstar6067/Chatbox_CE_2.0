@@ -15,6 +15,7 @@ export const HISTORY_IMAGE_MODEL_DISPLAY_NAMES: Record<string, string> = {
   'gemini-3.1-flash-image': 'Nano Banana 2',
   'gemini-3.1-flash-lite-image': 'Nano Banana 2 Lite',
   'grok-imagine-image': 'Grok Imagine',
+  'grok-imagine-image-2.0': 'Grok Imagine 2.0',
   'grok-imagine-image-quality': 'Grok Imagine Quality',
   'gpt-image-1': 'GPT Image 1',
   'gpt-image-1.5': 'GPT Image 1.5',

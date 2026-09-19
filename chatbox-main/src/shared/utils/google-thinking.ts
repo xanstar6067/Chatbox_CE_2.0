@@ -20,6 +20,12 @@ const GOOGLE_THINKING_CONFIG_BY_MODEL: Array<{
     defaultLevel: 'minimal',
   },
   {
+    // Gemini 3.7 Flash and later dropped the `minimal` level.
+    pattern: /^gemini-3\.[78]-flash(?!-(lite|image))/i,
+    levels: ['low', 'medium', 'high'],
+    defaultLevel: 'medium',
+  },
+  {
     pattern: /^gemini-3\.[56]-flash-lite/i,
     levels: ['minimal', 'low', 'medium', 'high'],
     defaultLevel: 'minimal',

@@ -9,7 +9,16 @@ vi.mock('ai', async (importOriginal) => ({
   generateText,
 }))
 
+import type { CallChatCompletionOptions } from '@shared/models/types'
+import type { ProviderModelInfo } from '@shared/types'
+import { supportsGeminiSamplingParameters } from '../gemini-types'
 import Gemini from './gemini'
+
+class TestGemini extends Gemini {
+  public exposeCallSettings(options: CallChatCompletionOptions = {}) {
+    return this.getCallSettings(options)
+  }
+}
 
 function createDependencies(): ModelDependencies {
   return {
@@ -168,5 +177,44 @@ describe('Gemini native web search', () => {
     )
 
     expect(model.getNativeWebSearch({ hasCustomTools: true })?.tools.web_search).toBeDefined()
+  })
+})
+
+describe('Gemini sampling parameters', () => {
+  function createChatModel(model: ProviderModelInfo) {
+    return new TestGemini(
+      {
+        geminiAPIKey: 'gemini-test-key',
+        geminiAPIHost: 'https://generativelanguage.googleapis.com',
+        model,
+        temperature: 0.4,
+        topP: 0.8,
+        maxOutputTokens: 2048,
+      },
+      createDependencies()
+    )
+  }
+
+  it('omits the deprecated sampling fields for Gemini 3.6 Flash, 3.5 Flash-Lite and later', () => {
+    for (const modelId of ['gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-4-flash']) {
+      const settings = createChatModel({ modelId, capabilities: ['reasoning'] }).exposeCallSettings()
+      expect(settings).toMatchObject({ temperature: undefined, topP: undefined, maxOutputTokens: 2048 })
+    }
+  })
+
+  it('keeps sampling fields for models that still honor them', () => {
+    for (const modelId of ['gemini-3.5-flash', 'gemini-3.1-pro-preview', 'gemini-3.1-flash-lite', 'gemini-2.5-pro']) {
+      expect(supportsGeminiSamplingParameters(modelId)).toBe(true)
+      const settings = createChatModel({ modelId, capabilities: ['reasoning'] }).exposeCallSettings()
+      expect(settings).toMatchObject({ temperature: 0.4, topP: 0.8 })
+    }
+  })
+
+  it('sends the documented thinking level for Gemini 3.8 Flash', () => {
+    const settings = createChatModel({ modelId: 'gemini-3.8-flash', capabilities: ['reasoning'] }).exposeCallSettings({
+      providerOptions: { google: { thinkingConfig: { thinkingLevel: 'minimal', includeThoughts: true } } },
+    })
+    // `minimal` is not available on Gemini 3.8 Flash, so the documented default is used.
+    expect(settings.providerOptions?.google?.thinkingConfig).toEqual({ thinkingLevel: 'medium', includeThoughts: true })
   })
 })

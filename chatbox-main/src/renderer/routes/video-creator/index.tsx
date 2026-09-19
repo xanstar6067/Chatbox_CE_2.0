@@ -39,7 +39,7 @@ import { ImageModelSelect } from '@/components/ImageModelSelect'
 import Page from '@/components/layout/Page'
 import { useBlob } from '@/hooks/useBlob'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
-import { useVideoModelGroups, type VideoModelOption } from '@/hooks/useVideoModelGroups'
+import { getVideoDurationsForResolution, useVideoModelGroups, type VideoModelOption } from '@/hooks/useVideoModelGroups'
 import platform from '@/platform'
 import storage from '@/storage'
 import { StorageKeyGenerator } from '@/storage/StoreStorage'
@@ -218,6 +218,17 @@ function VideoCreatorPage() {
         ?.models.find((model) => model.modelId === selectedModel),
     [modelGroups, selectedModel, selectedProvider]
   )
+  const allowedDurations = useMemo(
+    () => (selectedOption ? getVideoDurationsForResolution(selectedOption, resolution) : [8]),
+    [resolution, selectedOption]
+  )
+
+  useEffect(() => {
+    // Some resolutions only allow specific durations (for example Veo 1080p/4k is 8s only).
+    if (!allowedDurations.includes(duration)) {
+      setDuration(allowedDurations[allowedDurations.length - 1])
+    }
+  }, [allowedDurations, duration])
 
   const applyModelDefaults = useCallback((model: VideoModelOption) => {
     setDuration((value) => (model.durations.includes(value) ? value : model.durations[0]))
@@ -494,7 +505,7 @@ function VideoCreatorPage() {
                       allowDeselect={false}
                       value={String(duration)}
                       onChange={(value) => setDuration(Number(value))}
-                      data={(selectedOption?.durations || [8]).map((value) => ({
+                      data={allowedDurations.map((value) => ({
                         value: String(value),
                         label: `${value}s`,
                       }))}

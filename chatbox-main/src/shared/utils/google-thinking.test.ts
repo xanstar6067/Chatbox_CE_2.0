@@ -27,6 +27,10 @@ describe('google-thinking utils', () => {
     ])
     expect(getSupportedGoogleThinkingLevels('gemini-3.5-flash')).toEqual(['minimal', 'low', 'medium', 'high'])
     expect(getSupportedGoogleThinkingLevels('gemini-3.6-flash')).toEqual(['minimal', 'low', 'medium', 'high'])
+    expect(getSupportedGoogleThinkingLevels('gemini-3.5-flash-lite')).toEqual(['minimal', 'low', 'medium', 'high'])
+    // Gemini 3.7 Flash and later have no minimal level.
+    expect(getSupportedGoogleThinkingLevels('gemini-3.7-flash')).toEqual(['low', 'medium', 'high'])
+    expect(getSupportedGoogleThinkingLevels('gemini-3.8-flash')).toEqual(['low', 'medium', 'high'])
     expect(getSupportedGoogleThinkingLevels('gemini-3.1-flash-lite-image')).toEqual(['minimal', 'high'])
     // Image models: not in the supported list
     expect(getSupportedGoogleThinkingLevels('gemini-3.1-flash-image-preview')).toEqual([])
@@ -38,6 +42,8 @@ describe('google-thinking utils', () => {
     expect(getDefaultGoogleThinkingLevel('gemini-3-flash-preview')).toBe('high')
     expect(getDefaultGoogleThinkingLevel('gemini-3.5-flash')).toBe('medium')
     expect(getDefaultGoogleThinkingLevel('gemini-3.6-flash')).toBe('medium')
+    expect(getDefaultGoogleThinkingLevel('gemini-3.8-flash')).toBe('medium')
+    expect(getDefaultGoogleThinkingLevel('gemini-3.5-flash-lite')).toBe('minimal')
     expect(getDefaultGoogleThinkingLevel('gemini-3.1-flash-lite-preview')).toBe('minimal')
     expect(getDefaultGoogleThinkingLevel('gemini-3.1-flash-lite-image')).toBe('minimal')
     expect(getDefaultGoogleThinkingLevel('gemini-3.1-flash-image-preview')).toBeUndefined()

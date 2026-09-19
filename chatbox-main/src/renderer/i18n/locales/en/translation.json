@@ -872,6 +872,7 @@
   "Thinking Budget only works for Gemini 2.5 models": "Thinking Budget only works for Gemini 2.5 models",
   "Thinking Effort": "Thinking Effort",
   "Thinking Effort only works for OpenAI o-series models": "Thinking Effort only works for OpenAI o-series models",
+  "Thinking Effort only works for OpenRouter models that support reasoning": "Thinking Effort only works for OpenRouter models that support reasoning",
   "Thinking Level": "Thinking Level",
   "Thinking Level only works for Gemini 3 models": "Thinking Level only works for Gemini 3 models",
   "Third-party cloud parsing service, supports PDF and most Office files. Requires API token.": "Third-party cloud parsing service, supports PDF and most Office files. Requires API token.",

@@ -14,6 +14,12 @@ export interface VideoModelOption {
   aspectRatios: string[]
   supportsImage: boolean
   supportsAudio: boolean
+  /** Durations allowed for specific resolutions when they are narrower than `durations`. */
+  durationsByResolution?: Record<string, number[]>
+}
+
+export function getVideoDurationsForResolution(model: VideoModelOption, resolution: string): number[] {
+  return model.durationsByResolution?.[resolution] ?? model.durations
 }
 
 export interface VideoModelGroup {
@@ -22,24 +28,27 @@ export interface VideoModelGroup {
   models: VideoModelOption[]
 }
 
+// https://ai.google.dev/gemini-api/docs/veo — 1080p and 4k only support 8-second videos.
 const GOOGLE_VEO_MODELS: VideoModelOption[] = [
   {
     modelId: 'veo-3.1-generate-preview',
     displayName: 'Veo 3.1',
     durations: [4, 6, 8],
-    resolutions: ['720p', '1080p'],
+    resolutions: ['720p', '1080p', '4k'],
     aspectRatios: ['16:9', '9:16'],
     supportsImage: true,
     supportsAudio: true,
+    durationsByResolution: { '1080p': [8], '4k': [8] },
   },
   {
     modelId: 'veo-3.1-fast-generate-preview',
     displayName: 'Veo 3.1 Fast',
     durations: [4, 6, 8],
-    resolutions: ['720p', '1080p'],
+    resolutions: ['720p', '1080p', '4k'],
     aspectRatios: ['16:9', '9:16'],
     supportsImage: true,
     supportsAudio: true,
+    durationsByResolution: { '1080p': [8], '4k': [8] },
   },
   {
     modelId: 'veo-3.1-lite-generate-preview',
@@ -49,6 +58,7 @@ const GOOGLE_VEO_MODELS: VideoModelOption[] = [
     aspectRatios: ['16:9', '9:16'],
     supportsImage: true,
     supportsAudio: true,
+    durationsByResolution: { '1080p': [8] },
   },
 ]
 

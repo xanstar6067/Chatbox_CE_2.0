@@ -17,3 +17,25 @@ export function buildGeminiImageConfig(
   }
   return undefined
 }
+
+/**
+ * Google deprecated temperature, topP and topK starting with Gemini 3.6 Flash and
+ * Gemini 3.5 Flash-Lite. Those models ignore the fields, and later generations will
+ * reject them with HTTP 400, so they must not be sent.
+ * @see https://ai.google.dev/gemini-api/docs/changelog
+ */
+export function supportsGeminiSamplingParameters(modelId: string): boolean {
+  const match = modelId.toLowerCase().match(/^gemini-(\d+)(?:\.(\d+))?-(.+)$/)
+  if (!match) {
+    return true
+  }
+  const major = Number(match[1])
+  const minor = Number(match[2] ?? 0)
+  if (major !== 3) {
+    return major < 3
+  }
+  if (minor >= 6) {
+    return false
+  }
+  return !(minor === 5 && match[3].startsWith('flash-lite'))
+}

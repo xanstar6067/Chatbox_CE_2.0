@@ -46,6 +46,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
+// When Gemini 3 combines built-in tools with function tools, the Google SDK reports the
+// built-in invocations as `server:<ToolType>`. Map them to Chatbox's tool names so the
+// existing native web search UI (and its source list) renders them.
+const GEMINI_SERVER_TOOL_NAMES: Record<string, string> = {
+  'server:GOOGLE_SEARCH_WEB': 'web_search',
+  'server:GOOGLE_SEARCH_IMAGE': 'web_search',
+  'server:URL_CONTEXT': 'parse_link',
+}
+
+function getDisplayToolName(toolName: string, providerExecuted: boolean | undefined): string {
+  return (providerExecuted && GEMINI_SERVER_TOOL_NAMES[toolName]) || toolName
+}
+
 function getSourceTitle(url: string, title?: string): string {
   if (title?.trim()) return title.trim()
   try {
@@ -194,7 +207,7 @@ export async function processStreamChunk(
         type: 'tool-call',
         state: 'call',
         toolCallId: chunk.toolCallId,
-        toolName: chunk.toolName,
+        toolName: getDisplayToolName(chunk.toolName, chunk.providerExecuted),
         args:
           chunk.providerExecuted && nativeWebSearchProvider && isRecord(args)
             ? { provider: nativeWebSearchProvider, ...args }

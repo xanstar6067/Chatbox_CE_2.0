@@ -160,7 +160,8 @@ export default class XAI extends OpenAICompatible {
       throw new ApiError('This xAI model does not support image generation')
     }
 
-    const inputImages = params.images?.slice(0, 3) || []
+    // xAI accepts up to 5 reference images per edit request.
+    const inputImages = params.images?.slice(0, 5) || []
     const isEdit = inputImages.length > 0
     const body: Record<string, unknown> = {
       model: this.options.model.modelId,
@@ -240,6 +241,7 @@ export default class XAI extends OpenAICompatible {
       resolution: params.resolution,
     }
     if (params.image) body.image = { url: params.image.imageUrl }
+    if (params.generateAudio !== undefined) body.generate_audio = params.generateAudio
 
     const response = await this.dependencies.request.apiRequest({
       url: `${this.options.apiHost}/videos/generations`,

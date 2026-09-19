@@ -107,6 +107,7 @@ interface ListModelsResponse {
     }
     top_provider?: {
       is_moderated?: boolean
+      max_completion_tokens?: number | null
     }
     canonical_slug?: string
     hugging_face_id?: string
@@ -160,9 +161,14 @@ export async function fetchRemoteModels(
       modelInfo.contextWindow = item.context_length
     }
 
+    if (item.top_provider?.max_completion_tokens) {
+      modelInfo.maxOutput = item.top_provider.max_completion_tokens
+    }
+
     // Add capabilities based on architecture
     if (item.architecture) {
       const capabilities: ProviderModelInfo['capabilities'] = []
+      const supportedParameters = item.supported_parameters || []
 
       // Check for vision capability
       if (item.architecture.input_modalities?.includes('image')) {
@@ -174,13 +180,19 @@ export async function fetchRemoteModels(
         capabilities.push('web_search')
       }
 
-      // Check for reasoning capability (OpenRouter specific)
-      if (item.pricing?.internal_reasoning && item.pricing.internal_reasoning !== '0') {
+      // Check for reasoning capability (OpenRouter specific). Most reasoning models are
+      // only discoverable through supported_parameters; separate reasoning pricing is rare.
+      if (
+        supportedParameters.includes('reasoning') ||
+        (item.pricing?.internal_reasoning && item.pricing.internal_reasoning !== '0')
+      ) {
         capabilities.push('reasoning')
       }
 
-      // Note: tool_use capability cannot be determined from OpenRouter response
-      // It would need to be added from local defaults
+      // Check for tool use capability (OpenRouter specific)
+      if (supportedParameters.includes('tools')) {
+        capabilities.push('tool_use')
+      }
 
       if (capabilities.length > 0) {
         modelInfo.capabilities = capabilities

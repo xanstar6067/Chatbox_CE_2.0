@@ -29,6 +29,11 @@ import {
   getSupportedGoogleThinkingLevels,
 } from '@shared/utils/google-thinking'
 import {
+  getDefaultOpenRouterReasoningEffort,
+  getSupportedOpenRouterReasoningEfforts,
+  type OpenRouterReasoningEffort,
+} from '@shared/utils/openrouter-reasoning'
+import {
   getDefaultXAIReasoningEffort,
   getSupportedXAIReasoningEfforts,
   type XAIReasoningEffort,
@@ -45,6 +50,7 @@ import SegmentedControl from '@/components/common/SegmentedControl'
 import SliderWithInput from '@/components/common/SliderWithInput'
 import { handleImageInputAndSave, ImageInStorage } from '@/components/Image'
 import ImageStyleSelect from '@/components/ImageStyleSelect'
+import { useOpenRouterModelReasoning } from '@/hooks/useOpenRouterModelReasoning'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import { trackingEvent } from '@/packages/event'
 import storage from '@/storage'
@@ -821,6 +827,60 @@ function XAIProviderConfig({
   )
 }
 
+function OpenRouterProviderConfig({
+  settings,
+  onSettingsChange,
+}: {
+  settings: SessionSettings
+  onSettingsChange: (data: Session['settings']) => void
+}) {
+  const { t } = useTranslation()
+  const modelId = settings?.modelId || ''
+  const savedOptions = settings?.providerOptions?.openrouter
+  const savedReasoningEffort =
+    !savedOptions?.modelId || savedOptions.modelId === modelId ? savedOptions?.reasoningEffort : undefined
+  const modelReasoning = useOpenRouterModelReasoning(modelId, Boolean(modelId))
+  const supportedLevels = useMemo(
+    () => getSupportedOpenRouterReasoningEfforts(modelReasoning ?? undefined),
+    [modelReasoning]
+  )
+
+  const handleReasoningEffortChange = useCallback(
+    (reasoningEffort: OpenRouterReasoningEffort) => {
+      onSettingsChange({
+        providerOptions: {
+          openrouter: { reasoningEffort, modelId },
+        },
+      })
+    },
+    [modelId, onSettingsChange]
+  )
+
+  const currentReasoningEffort = useMemo(() => {
+    if (supportedLevels.length === 0) {
+      return undefined
+    }
+    if (savedReasoningEffort && supportedLevels.includes(savedReasoningEffort)) {
+      return savedReasoningEffort
+    }
+    return getDefaultOpenRouterReasoningEffort(modelReasoning ?? undefined)
+  }, [modelReasoning, savedReasoningEffort, supportedLevels])
+
+  if (!currentReasoningEffort) {
+    return null
+  }
+
+  return (
+    <ThinkingLevelConfig
+      currentLevel={currentReasoningEffort}
+      supportedLevels={supportedLevels}
+      onLevelChange={handleReasoningEffortChange}
+      label={t('Thinking Effort')}
+      tooltipText={t('Thinking Effort only works for OpenRouter models that support reasoning')}
+    />
+  )
+}
+
 export function ChatConfig({
   settings,
   onSettingsChange,
@@ -932,6 +992,9 @@ export function ChatConfig({
       )}
       {settings?.provider === ModelProviderEnum.XAI && (
         <XAIProviderConfig settings={settings} onSettingsChange={onSettingsChange} />
+      )}
+      {settings?.provider === ModelProviderEnum.OpenRouter && (
+        <OpenRouterProviderConfig settings={settings} onSettingsChange={onSettingsChange} />
       )}
     </Stack>
   )

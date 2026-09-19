@@ -17,8 +17,13 @@ describe('image model definitions', () => {
   })
 
   it('recognizes Grok Imagine models and their aspect ratios', () => {
-    expect(KNOWN_XAI_IMAGE_MODELS.map((model) => model.modelId)).toContain('grok-imagine-image-quality')
+    expect(KNOWN_XAI_IMAGE_MODELS.map((model) => model.modelId)).toEqual([
+      'grok-imagine-image-2.0',
+      'grok-imagine-image',
+    ])
+    expect(getImageModelFamily('grok-imagine-image-2.0')).toBe('xai')
     expect(getImageModelFamily('grok-imagine-image-quality')).toBe('xai')
     expect(getRatioOptionsForModel('grok-imagine-image')).toContain('19.5:9')
+    expect(getRatioOptionsForModel('grok-imagine-image-2.0')).toEqual(expect.arrayContaining(['21:9', '5:2']))
   })
 })

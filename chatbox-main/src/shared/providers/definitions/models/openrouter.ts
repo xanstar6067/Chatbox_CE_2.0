@@ -1,6 +1,6 @@
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { extractReasoningMiddleware, wrapLanguageModel } from 'ai'
-import AbstractAISDKModel from '../../../models/abstract-ai-sdk'
+import AbstractAISDKModel, { type CallSettings } from '../../../models/abstract-ai-sdk'
 import { ApiError } from '../../../models/errors'
 import { fetchRemoteModels } from '../../../models/openai-compatible'
 import type { CallChatCompletionOptions, NativeWebSearchConfig } from '../../../models/types'
@@ -81,12 +81,19 @@ export default class OpenRouter extends AbstractAISDKModel {
     super(options, dependencies)
   }
 
-  protected getCallSettings() {
-    return {
+  protected getCallSettings(options: CallChatCompletionOptions = {}): CallSettings {
+    const settings: CallSettings = {
       temperature: this.options.temperature,
       topP: this.options.topP,
       maxOutputTokens: this.options.maxOutputTokens,
     }
+    const { reasoningEffort, modelId } = options.providerOptions?.openrouter || {}
+    if (reasoningEffort && (!modelId || modelId === this.options.model.modelId)) {
+      // The OpenRouter SDK spreads providerOptions.openrouter into the request
+      // body, and OpenRouter maps the unified effort onto each upstream model.
+      settings.providerOptions = { openrouter: { reasoning: { effort: reasoningEffort } } }
+    }
+    return settings
   }
 
   protected getProvider(options: CallChatCompletionOptions = {}) {

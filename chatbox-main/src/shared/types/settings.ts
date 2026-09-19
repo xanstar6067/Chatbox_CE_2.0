@@ -122,6 +122,12 @@ const XAIParamsSchema = z.object({
   reasoningEffort: z.enum(['none', 'low', 'medium', 'high', 'xhigh']).optional().catch(undefined),
 })
 
+const OpenRouterParamsSchema = z.object({
+  reasoningEffort: z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']).optional().catch(undefined),
+  // Effort levels differ per OpenRouter model, so a choice only applies to the model it was made for.
+  modelId: z.string().optional().catch(undefined),
+})
+
 const GoogleParamsSchema = z.object({
   thinkingConfig: z.object({
     thinkingBudget: z.number().optional().catch(undefined),
@@ -134,6 +140,7 @@ export const ProviderOptionsSchema = z.object({
   claude: ClaudeParamsSchema.optional(),
   openai: OpenAIParamsSchema.optional(),
   xai: XAIParamsSchema.optional(),
+  openrouter: OpenRouterParamsSchema.optional(),
   google: GoogleParamsSchema.optional(),
 })
 

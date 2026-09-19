@@ -80,7 +80,7 @@ describe('XAI', () => {
 
   it('exposes xAI server-side web search through Responses settings', () => {
     const model = createModel({
-      modelId: 'grok-4-fast',
+      modelId: 'grok-4.20-0309-reasoning',
       capabilities: ['reasoning', 'tool_use'],
     })
 
@@ -105,12 +105,12 @@ describe('XAI', () => {
       )
     )
 
-    const model = createModel({ modelId: 'grok-imagine-image-quality', type: 'image' })
+    const model = createModel({ modelId: 'grok-imagine-image-2.0', type: 'image' })
     const callback = vi.fn()
     const result = await model.paint({ prompt: 'A cat astronaut', num: 1, aspectRatio: '16:9' }, undefined, callback)
 
     expect(JSON.parse(apiRequest.mock.calls[0][0].body)).toEqual({
-      model: 'grok-imagine-image-quality',
+      model: 'grok-imagine-image-2.0',
       prompt: 'A cat astronaut',
       n: 1,
       response_format: 'b64_json',
@@ -167,6 +167,34 @@ describe('XAI', () => {
     expect(completed).toMatchObject({ status: 'completed', videoUrl: 'https://vidgen.x.ai/video.mp4' })
   })
 
+  it('forwards the audio toggle to Grok video generation', async () => {
+    apiRequest.mockResolvedValueOnce(new Response(JSON.stringify({ request_id: 'video-job-2' }), { status: 200 }))
+    const model = createModel({ modelId: 'grok-imagine-video-1.5', type: 'video' })
+
+    await model.startVideoGeneration({
+      prompt: 'Silent sunrise',
+      duration: 6,
+      resolution: '720p',
+      aspectRatio: '9:16',
+      generateAudio: false,
+    })
+
+    expect(JSON.parse(apiRequest.mock.calls[0][0].body)).toMatchObject({ generate_audio: false })
+  })
+
+  it('sends up to five reference images to Grok image edits', async () => {
+    apiRequest.mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: [{ b64_json: 'AQID', mime_type: 'image/png' }] }), { status: 200 })
+    )
+    const model = createModel({ modelId: 'grok-imagine-image-2.0', type: 'image' })
+    const images = Array.from({ length: 6 }, (_, index) => ({ imageUrl: `data:image/png;base64,${index}` }))
+
+    await model.paint({ prompt: 'Blend these', images, num: 1 })
+
+    expect(apiRequest.mock.calls[0][0].url).toBe('https://api.x.ai/v1/images/edits')
+    expect(JSON.parse(apiRequest.mock.calls[0][0].body).images).toHaveLength(5)
+  })
+
   it('parses xAI reasoning effort in provider options', () => {
     expect(ProviderOptionsSchema.parse({ xai: { reasoningEffort: 'xhigh' } })).toEqual({
       xai: { reasoningEffort: 'xhigh' },
@@ -186,7 +214,7 @@ describe('XAI', () => {
     expect(getSupportedXAIReasoningEfforts('grok-4.6')).toEqual(['low', 'medium', 'high', 'xhigh'])
     expect(getDefaultXAIReasoningEffort('grok-4.6')).toBe('high')
 
-    expect(getSupportedXAIReasoningEfforts('grok-4-1-fast-non-reasoning')).toEqual([])
+    expect(getSupportedXAIReasoningEfforts('grok-4.20-0309-non-reasoning')).toEqual([])
   })
 
   it('passes xAI reasoning effort through Chat Completions provider options', () => {

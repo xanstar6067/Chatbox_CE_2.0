@@ -1,8 +1,17 @@
+import { createOpenRouter } from '@openrouter/ai-sdk-provider'
+import type { CallChatCompletionOptions } from '@shared/models/types'
 import type { ProviderModelInfo } from '@shared/types'
 import type { ModelDependencies } from '@shared/types/adapters'
 import type { SentryScope } from '@shared/utils/sentry_adapter'
+import { generateText } from 'ai'
 import { describe, expect, it, vi } from 'vitest'
 import OpenRouter, { createOpenRouterWebSearchFetch } from './openrouter'
+
+class TestOpenRouter extends OpenRouter {
+  public exposeCallSettings(options: CallChatCompletionOptions = {}) {
+    return this.getCallSettings(options)
+  }
+}
 
 function createDependencies(): ModelDependencies {
   return {
@@ -29,7 +38,7 @@ function createDependencies(): ModelDependencies {
 }
 
 function createModel(model: ProviderModelInfo, dependencies = createDependencies()) {
-  return new OpenRouter(
+  return new TestOpenRouter(
     {
       apiKey: 'openrouter-test-key',
       model,
@@ -49,6 +58,97 @@ describe('OpenRouter', () => {
       provider: 'OpenRouter Search',
       tools: {},
     })
+  })
+
+  it('sends the selected reasoning effort for the model it was chosen for', () => {
+    const model = createModel({ modelId: 'anthropic/claude-opus-5', capabilities: ['reasoning'] })
+
+    expect(
+      model.exposeCallSettings({
+        providerOptions: { openrouter: { reasoningEffort: 'xhigh', modelId: 'anthropic/claude-opus-5' } },
+      }).providerOptions
+    ).toEqual({ openrouter: { reasoning: { effort: 'xhigh' } } })
+  })
+
+  it('does not reuse a reasoning effort chosen for another model', () => {
+    const model = createModel({ modelId: 'google/gemini-3.8-flash', capabilities: ['reasoning'] })
+
+    expect(
+      model.exposeCallSettings({
+        providerOptions: { openrouter: { reasoningEffort: 'max', modelId: 'anthropic/claude-opus-5' } },
+      }).providerOptions
+    ).toBeUndefined()
+    expect(model.exposeCallSettings().providerOptions).toBeUndefined()
+  })
+
+  it('serializes the reasoning provider option into the OpenRouter request body', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            id: 'gen-1',
+            model: 'anthropic/claude-opus-5',
+            choices: [{ index: 0, message: { role: 'assistant', content: 'ok' }, finish_reason: 'stop' }],
+            usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+    )
+    const model = createModel({ modelId: 'anthropic/claude-opus-5', capabilities: ['reasoning'] })
+    const { providerOptions } = model.exposeCallSettings({
+      providerOptions: { openrouter: { reasoningEffort: 'low' } },
+    })
+
+    await generateText({
+      model: createOpenRouter({ apiKey: 'test', fetch }).languageModel('anthropic/claude-opus-5'),
+      prompt: 'Hi',
+      providerOptions,
+    })
+
+    expect(JSON.parse(fetch.mock.calls[0][1]?.body as string).reasoning).toEqual({ effort: 'low' })
+  })
+
+  it('reads tool use, reasoning and output limits from the OpenRouter model catalog', async () => {
+    const dependencies = createDependencies()
+    vi.mocked(dependencies.request.apiRequest).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          data: [
+            {
+              id: 'google/gemini-3.8-flash',
+              name: 'Google: Gemini 3.8 Flash',
+              context_length: 1_048_576,
+              architecture: { input_modalities: ['text', 'image'] },
+              pricing: { prompt: '0.00000075', completion: '0.00000375' },
+              top_provider: { max_completion_tokens: 65_536 },
+              supported_parameters: ['reasoning', 'tools', 'tool_choice'],
+            },
+            {
+              id: 'some/plain-model',
+              context_length: 8192,
+              architecture: { input_modalities: ['text'] },
+              top_provider: { max_completion_tokens: null },
+              supported_parameters: ['temperature'],
+            },
+          ],
+        }),
+        { status: 200 }
+      )
+    )
+    const model = createModel({ modelId: 'google/gemini-3.8-flash' }, dependencies)
+
+    await expect(model.listModels()).resolves.toEqual([
+      {
+        modelId: 'google/gemini-3.8-flash',
+        type: 'chat',
+        nickname: 'Google: Gemini 3.8 Flash',
+        contextWindow: 1_048_576,
+        maxOutput: 65_536,
+        capabilities: ['vision', 'reasoning', 'tool_use'],
+      },
+      { modelId: 'some/plain-model', type: 'chat', contextWindow: 8192 },
+    ])
   })
 
   it('does not expose web search for image models', () => {
