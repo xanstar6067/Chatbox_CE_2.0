@@ -34,7 +34,7 @@ import { taskSessionStore } from './stores/taskSessionStore'
 import { useUIStore } from './stores/uiStore'
 import { installUpdate, useUpdateStore } from './stores/updateStore'
 import { featureFlags } from './utils/feature-flags'
-import { CHATBOX_BUILD_PLATFORM, CHATBOX_BUILD_TARGET } from './variables'
+import { CHATBOX_BUILD_TARGET } from './variables'
 
 export default function Sidebar() {
   const { t } = useTranslation()
@@ -155,7 +155,12 @@ export default function Sidebar() {
       PaperProps={
         language === 'ar' ? { sx: { direction: 'rtl', overflowY: 'initial' } } : { sx: { overflowY: 'initial' } }
       }
-      disableSwipeToOpen={CHATBOX_BUILD_PLATFORM !== 'ios'} // 只在iOS设备上启用SwipeToOpen
+      disableSwipeToOpen={!isSmallScreen}
+      disableDiscovery={!isSmallScreen}
+      allowSwipeInChildren={isSmallScreen}
+      hysteresis={0.25}
+      minFlingVelocity={350}
+      swipeAreaWidth={isSmallScreen ? 32 : 0}
     >
       <Stack
         h="100%"
