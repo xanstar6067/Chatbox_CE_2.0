@@ -48,6 +48,13 @@ describe('openrouter-reasoning utils', () => {
     expect(getDefaultOpenRouterReasoningEffort(enabledByDefault)).toBe('medium')
   })
 
+  it('recognizes reasoning models that publish the older parameter names', () => {
+    const legacy = { supportedParameters: ['include_reasoning', 'reasoning_effort'] }
+
+    expect(supportsOpenRouterReasoning(legacy)).toBe(true)
+    expect(getSupportedOpenRouterReasoningEfforts(legacy)).toEqual(['none', 'low', 'medium', 'high'])
+  })
+
   it('ignores unknown effort names and models without reasoning support', () => {
     expect(
       getSupportedOpenRouterReasoningEfforts({

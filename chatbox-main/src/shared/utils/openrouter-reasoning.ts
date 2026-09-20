@@ -15,6 +15,13 @@ export const OPENROUTER_REASONING_EFFORTS: OpenRouterReasoningEffort[] = [
 // OpenRouter maps these onto the underlying provider's reasoning controls.
 const GENERIC_REASONING_EFFORTS: OpenRouterReasoningEffort[] = ['low', 'medium', 'high']
 
+/**
+ * The `supported_parameters` entries that mark a model as reasoning-capable in
+ * OpenRouter's `/models` catalog. Models expose the control under different names
+ * depending on the upstream provider, so all three have to be recognised.
+ */
+export const OPENROUTER_REASONING_PARAMETERS = ['reasoning', 'include_reasoning', 'reasoning_effort']
+
 /** The `reasoning` object and `supported_parameters` from OpenRouter's `/models` catalog. */
 export interface OpenRouterModelReasoningInfo {
   supportedParameters?: string[]
@@ -32,7 +39,10 @@ function isOpenRouterReasoningEffort(value: unknown): value is OpenRouterReasoni
 
 export function supportsOpenRouterReasoning(info: OpenRouterModelReasoningInfo | undefined): boolean {
   if (!info) return false
-  return Boolean(info.supportedParameters?.includes('reasoning') || info.reasoning?.supported_efforts?.length)
+  return Boolean(
+    info.supportedParameters?.some((parameter) => OPENROUTER_REASONING_PARAMETERS.includes(parameter)) ||
+      info.reasoning?.supported_efforts?.length
+  )
 }
 
 export function getSupportedOpenRouterReasoningEfforts(

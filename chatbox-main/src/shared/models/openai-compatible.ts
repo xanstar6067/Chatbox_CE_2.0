@@ -2,6 +2,7 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import { extractReasoningMiddleware, wrapLanguageModel } from 'ai'
 import type { ProviderModelInfo, ToolUseScope } from '../types'
 import type { ModelDependencies } from '../types/adapters'
+import { OPENROUTER_REASONING_PARAMETERS } from '../utils/openrouter-reasoning'
 import AbstractAISDKModel, { type CallSettings } from './abstract-ai-sdk'
 import { ApiError } from './errors'
 import type { ModelInterface } from './types'
@@ -183,7 +184,7 @@ export async function fetchRemoteModels(
       // Check for reasoning capability (OpenRouter specific). Most reasoning models are
       // only discoverable through supported_parameters; separate reasoning pricing is rare.
       if (
-        supportedParameters.includes('reasoning') ||
+        supportedParameters.some((parameter) => OPENROUTER_REASONING_PARAMETERS.includes(parameter)) ||
         (item.pricing?.internal_reasoning && item.pricing.internal_reasoning !== '0')
       ) {
         capabilities.push('reasoning')

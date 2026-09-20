@@ -67,7 +67,16 @@ describe('OpenRouter', () => {
       model.exposeCallSettings({
         providerOptions: { openrouter: { reasoningEffort: 'xhigh', modelId: 'anthropic/claude-opus-5' } },
       }).providerOptions
-    ).toEqual({ openrouter: { reasoning: { effort: 'xhigh' } } })
+    ).toEqual({ openrouter: { reasoning: { effort: 'xhigh', exclude: false } } })
+  })
+
+  it('disables reasoning through the enabled flag instead of an effort value', () => {
+    // Anthropic models reject `effort: 'none'`, so the disable path must not send it.
+    const model = createModel({ modelId: 'anthropic/claude-opus-5', capabilities: ['reasoning'] })
+
+    expect(
+      model.exposeCallSettings({ providerOptions: { openrouter: { reasoningEffort: 'none' } } }).providerOptions
+    ).toEqual({ openrouter: { reasoning: { enabled: false, exclude: true } } })
   })
 
   it('does not reuse a reasoning effort chosen for another model', () => {
@@ -106,7 +115,7 @@ describe('OpenRouter', () => {
       providerOptions,
     })
 
-    expect(JSON.parse(fetch.mock.calls[0][1]?.body as string).reasoning).toEqual({ effort: 'low' })
+    expect(JSON.parse(fetch.mock.calls[0][1]?.body as string).reasoning).toEqual({ effort: 'low', exclude: false })
   })
 
   it('reads tool use, reasoning and output limits from the OpenRouter model catalog', async () => {
@@ -123,6 +132,14 @@ describe('OpenRouter', () => {
               pricing: { prompt: '0.00000075', completion: '0.00000375' },
               top_provider: { max_completion_tokens: 65_536 },
               supported_parameters: ['reasoning', 'tools', 'tool_choice'],
+            },
+            {
+              id: 'some/legacy-reasoner',
+              context_length: 200_000,
+              architecture: { input_modalities: ['text'] },
+              // Models that predate the unified `reasoning` object expose the control
+              // under these names instead.
+              supported_parameters: ['include_reasoning', 'reasoning_effort'],
             },
             {
               id: 'some/plain-model',
@@ -146,6 +163,12 @@ describe('OpenRouter', () => {
         contextWindow: 1_048_576,
         maxOutput: 65_536,
         capabilities: ['vision', 'reasoning', 'tool_use'],
+      },
+      {
+        modelId: 'some/legacy-reasoner',
+        type: 'chat',
+        contextWindow: 200_000,
+        capabilities: ['reasoning'],
       },
       { modelId: 'some/plain-model', type: 'chat', contextWindow: 8192 },
     ])

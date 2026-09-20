@@ -91,7 +91,16 @@ export default class OpenRouter extends AbstractAISDKModel {
     if (reasoningEffort && (!modelId || modelId === this.options.model.modelId)) {
       // The OpenRouter SDK spreads providerOptions.openrouter into the request
       // body, and OpenRouter maps the unified effort onto each upstream model.
-      settings.providerOptions = { openrouter: { reasoning: { effort: reasoningEffort } } }
+      // `effort: 'none'` is rejected by part of the upstream models (Anthropic among
+      // them), so reasoning is disabled through the universally accepted `enabled` flag.
+      settings.providerOptions = {
+        openrouter: {
+          reasoning:
+            reasoningEffort === 'none'
+              ? { enabled: false, exclude: true }
+              : { effort: reasoningEffort, exclude: false },
+        },
+      }
     }
     return settings
   }
