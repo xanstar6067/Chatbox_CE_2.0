@@ -1,9 +1,9 @@
 import NiceModal from '@ebay/nice-modal-react'
 import { ActionIcon, Flex, Text } from '@mantine/core'
 import type { SessionMeta } from '@shared/types'
-import { IconCopy, IconDots, IconEdit, IconStar, IconStarFilled, IconTrash } from '@tabler/icons-react'
+import { IconArrowsSort, IconCopy, IconDots, IconEdit, IconStar, IconStarFilled, IconTrash } from '@tabler/icons-react'
 import clsx from 'clsx'
-import { memo, useMemo, useRef, useState } from 'react'
+import { memo, type ReactNode, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import { router } from '@/router'
@@ -21,13 +21,21 @@ import { ScalableIcon } from '../common/ScalableIcon'
 export interface Props {
   session: SessionMeta
   selected: boolean
+  /** Starts the list's reorder mode. When omitted, the "Reorder" menu item is hidden. */
+  onStartReorder?: () => void
+  /** Reorder mode: the row is not clickable and the menu is replaced by this drag handle. */
+  dragHandle?: ReactNode
 }
 
 function SessionItem(props: Props) {
-  const { session, selected } = props
+  const { session, selected, onStartReorder, dragHandle } = props
+  const reordering = dragHandle !== undefined
   const { t } = useTranslation()
   const setShowSidebar = useUIStore((s) => s.setShowSidebar)
   const onClick = () => {
+    if (reordering) {
+      return
+    }
     switchCurrentSession(session.id)
     if (isSmallScreen) {
       setShowSidebar(false)
@@ -65,6 +73,15 @@ function SessionItem(props: Props) {
           void updateSessionStore(session.id, { starred: !session.starred })
         },
       },
+      ...(onStartReorder
+        ? [
+            {
+              text: t('Reorder'),
+              icon: IconArrowsSort,
+              onClick: () => onStartReorder(),
+            } satisfies ActionMenuItemProps,
+          ]
+        : []),
       { divider: true },
       {
         doubleCheck: true,
@@ -91,15 +108,16 @@ function SessionItem(props: Props) {
         },
       },
     ],
-    [session, selected, t, deleting]
+    [session, selected, t, deleting, onStartReorder]
   )
 
   return (
     <Flex
       align="center"
       className={clsx(
-        'cursor-pointer rounded-sm group/session-item',
-        isSmallScreen
+        'rounded-sm group/session-item',
+        reordering ? 'bg-chatbox-background-gray-secondary' : 'cursor-pointer',
+        reordering || isSmallScreen
           ? ''
           : selected
             ? 'bg-chatbox-background-brand-secondary'
@@ -124,30 +142,36 @@ function SessionItem(props: Props) {
         {session.name}
       </Text>
 
-      <ActionMenu
-        type="desktop"
-        items={actionMenuItems}
-        position="bottom-start"
-        opened={menuOpened}
-        onChange={(opened) => setMenuOpened(opened)}
-      >
-        <ActionIcon
-          variant="transparent"
-          size={20}
-          color={session.starred ? 'chatbox-brand' : 'chatbox-tertiary'}
-          className={isSmallScreen || session.starred || menuOpened ? '' : 'group-hover/session-item:visible invisible'}
-          onClick={(event) => {
-            event.stopPropagation()
-            event.preventDefault()
-          }}
+      {reordering ? (
+        dragHandle
+      ) : (
+        <ActionMenu
+          type="desktop"
+          items={actionMenuItems}
+          position="bottom-start"
+          opened={menuOpened}
+          onChange={(opened) => setMenuOpened(opened)}
         >
-          {session.starred ? (
-            <ScalableIcon icon={IconStarFilled} className="text-inherit" size={16} />
-          ) : (
-            <ScalableIcon icon={IconDots} className="text-inherit" size={16} />
-          )}
-        </ActionIcon>
-      </ActionMenu>
+          <ActionIcon
+            variant="transparent"
+            size={20}
+            color={session.starred ? 'chatbox-brand' : 'chatbox-tertiary'}
+            className={
+              isSmallScreen || session.starred || menuOpened ? '' : 'group-hover/session-item:visible invisible'
+            }
+            onClick={(event) => {
+              event.stopPropagation()
+              event.preventDefault()
+            }}
+          >
+            {session.starred ? (
+              <ScalableIcon icon={IconStarFilled} className="text-inherit" size={16} />
+            ) : (
+              <ScalableIcon icon={IconDots} className="text-inherit" size={16} />
+            )}
+          </ActionIcon>
+        </ActionMenu>
+      )}
     </Flex>
   )
 }
