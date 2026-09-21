@@ -1,14 +1,27 @@
 import { createTheme, type ThemeOptions } from '@mui/material/styles'
 import { useLayoutEffect, useMemo } from 'react'
+import { applyThemeColors, findTheme } from '@/lib/theme-presets'
 import { settingsStore, useLanguage, useSettingsStore } from '@/stores/settingsStore'
 import { uiStore, useUIStore } from '@/stores/uiStore'
-import { type Language, Theme } from '../../shared/types'
+import { type Language, Theme, type ThemeColors, type ThemeMode } from '../../shared/types'
 import platform from '../platform'
 import DesktopPlatform from '../platform/desktop_platform'
 
+/**
+ * Color scheme imposed by the active appearance theme, or `undefined` when the
+ * theme follows the Light / Dark / System setting (the Classic theme).
+ */
+function getForcedThemeMode(): ThemeMode | undefined {
+  const { themePresetId, customThemes } = settingsStore.getState()
+  return findTheme(themePresetId, customThemes).mode
+}
+
 export const switchTheme = async (theme: Theme) => {
+  const forcedMode = getForcedThemeMode()
   let finalTheme = 'light' as 'light' | 'dark'
-  if (theme === Theme.System) {
+  if (forcedMode) {
+    finalTheme = forcedMode
+  } else if (theme === Theme.System) {
     finalTheme = (await platform.shouldUseDarkColors()) ? 'dark' : 'light'
   } else {
     finalTheme = theme === Theme.Dark ? 'dark' : 'light'
@@ -22,14 +35,23 @@ export const switchTheme = async (theme: Theme) => {
   }
 }
 
+/** The appearance theme currently selected in Settings → Appearance Themes. */
+export function useActiveTheme() {
+  const themePresetId = useSettingsStore((state) => state.themePresetId)
+  const customThemes = useSettingsStore((state) => state.customThemes)
+  return useMemo(() => findTheme(themePresetId, customThemes), [themePresetId, customThemes])
+}
+
 export default function useAppTheme() {
   const theme = useSettingsStore((state) => state.theme)
   const realTheme = useUIStore((state) => state.realTheme)
   const language = useLanguage()
+  const activeTheme = useActiveTheme()
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: switchTheme reads the active theme from the store
   useLayoutEffect(() => {
     switchTheme(theme)
-  }, [theme])
+  }, [theme, activeTheme.mode])
 
   useLayoutEffect(() => {
     platform.onSystemThemeChange(() => {
@@ -37,6 +59,11 @@ export default function useAppTheme() {
       switchTheme(theme)
     })
   }, [])
+
+  useLayoutEffect(() => {
+    // paint the active appearance theme over the defaults from globals.css
+    applyThemeColors(activeTheme.colors)
+  }, [activeTheme])
 
   useLayoutEffect(() => {
     // update material-ui theme
@@ -49,30 +76,38 @@ export default function useAppTheme() {
     }
   }, [realTheme])
 
-  const themeObj = useMemo(() => createTheme(getThemeDesign(realTheme, language)), [realTheme, language])
+  const themeObj = useMemo(
+    () => createTheme(getThemeDesign(realTheme, language, activeTheme.colors)),
+    [realTheme, language, activeTheme]
+  )
   return themeObj
 }
 
-export function getThemeDesign(realTheme: 'light' | 'dark', language: Language): ThemeOptions {
+export function getThemeDesign(
+  realTheme: 'light' | 'dark',
+  language: Language,
+  // MUI 内部无法处理 css 变量，需要使用具体颜色值，因此自定义主题的颜色需要在这里显式传入
+  colors?: ThemeColors
+): ThemeOptions {
+  const background = colors?.['background-primary'] ?? (realTheme === 'dark' ? '#242424' : undefined)
   return {
     palette: {
       mode: realTheme,
-      ...(realTheme === 'light'
-        ? {}
-        : {
-            // MUI 内部无法处理 css 变量，需要使用具体颜色值
+      ...(background
+        ? {
             background: {
-              default: '#242424',
-              paper: '#242424',
+              default: background,
+              paper: background,
             },
-          }),
+          }
+        : {}),
     },
     components: {
       MuiSnackbarContent: {
         styleOverrides: {
           root: {
-            backgroundColor: realTheme === 'dark' ? '#333333' : undefined,
-            color: realTheme === 'dark' ? '#ffffff' : undefined,
+            backgroundColor: realTheme === 'dark' ? (colors?.['background-tertiary'] ?? '#333333') : undefined,
+            color: realTheme === 'dark' ? (colors?.['tint-primary'] ?? '#ffffff') : undefined,
           },
         },
       },

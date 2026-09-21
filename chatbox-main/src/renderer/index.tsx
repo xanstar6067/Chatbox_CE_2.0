@@ -9,6 +9,7 @@ import { StrictMode, useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import { ErrorBoundary } from './components/common/ErrorBoundary'
 import i18n from './i18n'
+import { applyThemeColors, findTheme } from './lib/theme-presets'
 import { getLogger } from './lib/utils'
 import platform from './platform'
 import reportWebVitals from './reportWebVitals'
@@ -153,6 +154,8 @@ initializeApp()
     ])
 
     i18n.changeLanguage(settings.language)
+    // paint the saved appearance theme before the first render to avoid a flash
+    applyThemeColors(findTheme(settings.themePresetId, settings.customThemes).colors)
     initLoginLicenseStateReconciliation()
 
     // Initialize auto-updater event listeners (desktop only, idempotent)

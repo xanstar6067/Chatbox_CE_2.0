@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { ModelProviderEnum, ModelProviderType } from './provider'
 import { SkillSettingsSchema } from './skills'
+import { CLASSIC_THEME_ID, CustomThemeSchema } from './theme'
 
 // Re-export for backward compatibility
 export { ModelProviderType } from './provider'
@@ -385,6 +386,11 @@ export const SettingsSchema = GlobalSessionSettingsSchema.extend({
   messageLayout: z.enum(['left', 'bubble']).optional().catch(undefined),
 
   theme: z.nativeEnum(Theme),
+
+  // Appearance themes: the active theme preset and the ones saved by the user.
+  // See src/shared/types/theme.ts and src/renderer/lib/theme-presets.ts.
+  themePresetId: z.string().default(CLASSIC_THEME_ID),
+  customThemes: z.array(CustomThemeSchema).default([]),
   language: z.enum([
     'en',
     'zh-Hans',

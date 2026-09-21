@@ -11,6 +11,7 @@ import {
   IconInfoCircle,
   IconKeyboard,
   IconMessages,
+  IconPalette,
   IconSparkles,
   IconWand,
   IconWorldWww,
@@ -99,6 +100,11 @@ const ITEMS = [
           icon: <IconKeyboard className="w-full h-full" />,
         },
       ]),
+  {
+    key: 'themes',
+    label: 'Appearance Themes',
+    icon: <IconPalette className="w-full h-full" />,
+  },
   {
     key: 'general',
     label: 'General Settings',

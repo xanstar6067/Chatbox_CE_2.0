@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid'
-import { type Config, ModelProviderEnum, type SessionSettings, type Settings, Theme } from './types'
+import { CLASSIC_THEME_ID, type Config, ModelProviderEnum, type SessionSettings, type Settings, Theme } from './types'
 
 export function settings(): Settings {
   return {
@@ -79,6 +79,8 @@ export function settings(): Settings {
     defaultAssistantAvatarKey: '',
     backgroundImageKey: '',
     theme: Theme.System,
+    themePresetId: CLASSIC_THEME_ID,
+    customThemes: [],
     language: 'en',
     fontSize: 14,
     spellCheck: true,

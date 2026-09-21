@@ -4,7 +4,7 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import Toasts from '@/components/common/Toasts'
 import DesktopDownloadReminder from '@/components/layout/DesktopDownloadReminder'
 import ExitFullscreenButton from '@/components/layout/ExitFullscreenButton'
-import useAppTheme from '@/hooks/useAppTheme'
+import useAppTheme, { useActiveTheme } from '@/hooks/useAppTheme'
 import { useSystemLanguageWhenInit } from '@/hooks/useDefaultSystemLanguage'
 import { useI18nEffect } from '@/hooks/useI18nEffect'
 import useNeedRoomForWinControls from '@/hooks/useNeedRoomForWinControls'
@@ -204,17 +204,21 @@ function Root() {
   const sidebarWidth = useSidebarWidth()
 
   const _theme = useTheme()
+  const activeThemeMode = useActiveTheme().mode
   const { setColorScheme } = useMantineColorScheme()
   // biome-ignore lint/correctness/useExhaustiveDependencies: setColorScheme is stable
   useEffect(() => {
-    if (_theme === Theme.Dark) {
+    if (activeThemeMode) {
+      // the active appearance theme pins the color scheme
+      setColorScheme(activeThemeMode)
+    } else if (_theme === Theme.Dark) {
       setColorScheme('dark')
     } else if (_theme === Theme.Light) {
       setColorScheme('light')
     } else {
       setColorScheme('auto')
     }
-  }, [_theme])
+  }, [_theme, activeThemeMode])
 
   useEffect(() => {
     ;(() => {
@@ -652,6 +656,7 @@ export const Route = createRootRoute({
     useShortcut()
     const theme = useAppTheme()
     const _theme = useTheme()
+    const activeThemeMode = useActiveTheme().mode
     const fontSize = useSettingsStore((state) => state.fontSize)
     useEffect(() => {
       document.documentElement.style.setProperty('--chatbox-msg-font-size', `${fontSize}px`)
@@ -661,7 +666,9 @@ export const Route = createRootRoute({
     return (
       <MantineProvider
         theme={mantineTheme}
-        defaultColorScheme={_theme === Theme.Dark ? 'dark' : _theme === Theme.Light ? 'light' : 'auto'}
+        defaultColorScheme={
+          activeThemeMode ?? (_theme === Theme.Dark ? 'dark' : _theme === Theme.Light ? 'light' : 'auto')
+        }
       >
         <ThemeProvider theme={theme}>
           <CssBaseline />
