@@ -1,8 +1,8 @@
 import type { CopilotDetail, Message, Session, VideoGeneration } from '@shared/types'
+import { getSessionMediaStorageKeys, getSettingsMediaStorageKeys } from '@/packages/backup-media'
 import { getCopilotsMediaStorageKeys } from '@/packages/copilot-media'
-import { StorageKeyGenerator } from '@/storage/StoreStorage'
-import { listSessionsMeta } from '@/stores/chatStore'
-import { settingsStore } from '@/stores/settingsStore'
+import { listAllSessionsMeta } from '@/stores/chatStore'
+import { initSettingsStore, settingsStore } from '@/stores/settingsStore'
 import platform from '../platform'
 import storage, { StorageKey } from '../storage'
 
@@ -25,10 +25,14 @@ export async function tickStorageTask() {
   const needDeletedSet = new Set<string>(storageKeys)
 
   // 会话中还存在的图片、文件不需要删除
-  const sessions = await listSessionsMeta()
-  for (const sessionMeta of sessions) {
+  // Walk the stored sessions themselves instead of the session list: that list is
+  // paginated and hides migrated sessions, so anything outside the first page or
+  // hidden would look unreferenced and get deleted.
+  const allStoreKeys = await storage.getAllKeys()
+  const sessionStoreKeys = allStoreKeys.filter((key) => key.startsWith('session:'))
+  for (const sessionStoreKey of sessionStoreKeys) {
     // 不从 atom 中获取，避免水合状态
-    const session = await storage.getItem<Session | null>(StorageKeyGenerator.session(sessionMeta.id), null)
+    const session = await storage.getItem<Session | null>(sessionStoreKey, null)
     if (!session) {
       continue
     }
@@ -58,28 +62,27 @@ export async function tickStorageTask() {
       }
     }
 
-    // 会话助手头像不需要删除
-    if (session.assistantAvatarKey) {
-      needDeletedSet.delete(session.assistantAvatarKey)
-    }
-    // 会话背景图片不需要删除
-    if (session.backgroundImage?.type === 'storage-key') {
-      needDeletedSet.delete(session.backgroundImage.storageKey)
+    // 会话助手头像、会话背景图片不需要删除
+    for (const key of getSessionMediaStorageKeys(session)) {
+      needDeletedSet.delete(key)
     }
   }
 
-  // 用户头像不需要删除
+  // Session meta is the second home of the per-conversation avatar and background,
+  // so keep what it references even if the stored session is out of sync.
+  for (const sessionMeta of await listAllSessionsMeta()) {
+    for (const key of getSessionMediaStorageKeys(sessionMeta)) {
+      needDeletedSet.delete(key)
+    }
+  }
+
+  // 用户头像、助手头像、背景图片不需要删除
+  // Wait for the settings store to hydrate first: reading it too early yields the
+  // defaults, which would make every global image look unreferenced.
+  await initSettingsStore()
   const settings = settingsStore.getState().getSettings()
-  if (settings.userAvatarKey) {
-    needDeletedSet.delete(settings.userAvatarKey)
-  }
-  // 助手头像不需要删除
-  if (settings.defaultAssistantAvatarKey) {
-    needDeletedSet.delete(settings.defaultAssistantAvatarKey)
-  }
-  // 背景图片不需要删除
-  if (settings.backgroundImageKey) {
-    needDeletedSet.delete(settings.backgroundImageKey)
+  for (const key of getSettingsMediaStorageKeys(settings)) {
+    needDeletedSet.delete(key)
   }
 
   // Keep local avatar, background and screenshot blobs referenced by saved copilots.

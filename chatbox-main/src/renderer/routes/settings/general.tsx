@@ -13,7 +13,7 @@ import {
   TextInput,
   Title,
 } from '@mantine/core'
-import { type Language, type ProviderInfo, type Settings, Theme } from '@shared/types'
+import { type CopilotDetail, type Language, type ProviderInfo, type Session, type Settings, Theme } from '@shared/types'
 import { formatFileSize } from '@shared/utils'
 import { IconInfoCircle } from '@tabler/icons-react'
 import { createFileRoute } from '@tanstack/react-router'
@@ -24,6 +24,8 @@ import { useTranslation } from 'react-i18next'
 import { AdaptiveSelect } from '@/components/AdaptiveSelect'
 import LazySlider from '@/components/common/LazySlider'
 import { languageNameMap, languages } from '@/i18n/locales'
+import { addMediaStorageKeys, restoreMediaBackup, streamMediaBackupSection } from '@/packages/backup-media'
+import { restoreCopilotMediaFromBackup } from '@/packages/copilot-media'
 import platform from '@/platform'
 import storage, { StorageKey } from '@/storage'
 import { getMetaStorage, recoverSessionList } from '@/stores/chatStore'
@@ -330,6 +332,10 @@ const ImportExportDataSection = () => {
         if (!isFirstItem) yield ','
         yield `"__exported_at":"${date.toISOString()}"`
 
+        // Avatars and backgrounds live in blob storage, keyed from the values exported below.
+        // Collect their keys while walking the data, then export the blobs themselves.
+        const mediaStorageKeys = new Set<string>()
+
         // 获取所有存储的keys
         try {
           const allKeys = await storage.getAllKeys()
@@ -387,9 +393,17 @@ const ImportExportDataSection = () => {
                       }
                     }
 
+                    addMediaStorageKeys(mediaStorageKeys, { settings: cleanedSettings })
+
                     yield ','
                     yield `"${key}":${JSON.stringify(cleanedSettings)}`
                   } else {
+                    if (key.startsWith('session:')) {
+                      addMediaStorageKeys(mediaStorageKeys, { sessions: [value as Session] })
+                    } else if (key === StorageKey.MyCopilots) {
+                      addMediaStorageKeys(mediaStorageKeys, { copilots: value as CopilotDetail[] })
+                    }
+
                     yield ','
                     yield `"${key}":${JSON.stringify(value)}`
                   }
@@ -408,6 +422,7 @@ const ImportExportDataSection = () => {
           try {
             const metaStorage = await getMetaStorage()
             const allMeta = await metaStorage.getAll()
+            addMediaStorageKeys(mediaStorageKeys, { sessions: allMeta })
             if (allMeta.length > 0) {
               yield ','
               yield `"${StorageKey.ChatSessionsList}":${JSON.stringify(allMeta)}`
@@ -416,6 +431,10 @@ const ImportExportDataSection = () => {
             console.error('Failed to export session meta from DB:', error)
           }
         }
+
+        // Export the avatar and background blobs referenced by the data above.
+        yield ','
+        yield* streamMediaBackupSection(mediaStorageKeys, storage)
 
         yield '}'
       }
@@ -464,6 +483,17 @@ const ImportExportDataSection = () => {
             false
           )
 
+          // Restore avatar and background blobs before the values referencing them.
+          // A backup made by another build simply has no media section and restores without images.
+          await restoreMediaBackup(importData, storage)
+          await restoreCopilotMediaFromBackup(
+            importData,
+            Array.isArray(importData[StorageKey.MyCopilots])
+              ? (importData[StorageKey.MyCopilots] as CopilotDetail[])
+              : [],
+            storage
+          )
+
           const entriesToImport = Object.entries(importData).filter(
             ([key]) => key !== StorageKey.ChatSessionsList && key !== StorageKey.ConfigVersion && !key.startsWith('__')
           )
@@ -485,6 +515,13 @@ const ImportExportDataSection = () => {
                   ...item,
                   sortOrder: item.sortOrder ?? Date.now(),
                   createdAt: item.createdAt ?? Date.now(),
+                })
+              } else {
+                // Restore the backed up meta, including the conversation's avatar and background.
+                await metaStorage.update(item.id, {
+                  ...item,
+                  sortOrder: item.sortOrder ?? existing.sortOrder,
+                  createdAt: item.createdAt ?? existing.createdAt,
                 })
               }
             }
