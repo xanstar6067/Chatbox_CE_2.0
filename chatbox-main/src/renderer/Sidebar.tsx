@@ -12,7 +12,7 @@ import {
   IconSettingsFilled,
   IconVideoPlus,
 } from '@tabler/icons-react'
-import { useNavigate } from '@tanstack/react-router'
+import { useLocation, useNavigate } from '@tanstack/react-router'
 import clsx from 'clsx'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -52,6 +52,9 @@ export default function Sidebar() {
   const sidebarWidth = useSidebarWidth()
 
   const isSmallScreen = useIsSmallScreen()
+  const pathname = useLocation({ select: (l) => l.pathname })
+  // Edge swipe opens the drawer only in chat mode, not in settings, copilots, image/video pages etc.
+  const isChatRoute = pathname === '/' || pathname.startsWith('/session/')
 
   const [isResizing, setIsResizing] = useState(false)
   const [showDevPane, setShowDevPane] = useState(false)
@@ -155,12 +158,12 @@ export default function Sidebar() {
       PaperProps={
         language === 'ar' ? { sx: { direction: 'rtl', overflowY: 'initial' } } : { sx: { overflowY: 'initial' } }
       }
-      disableSwipeToOpen={!isSmallScreen}
-      disableDiscovery={!isSmallScreen}
+      disableSwipeToOpen={!isSmallScreen || !isChatRoute}
+      disableDiscovery={!isSmallScreen || !isChatRoute}
       allowSwipeInChildren={isSmallScreen}
       hysteresis={0.25}
       minFlingVelocity={350}
-      swipeAreaWidth={isSmallScreen ? 32 : 0}
+      swipeAreaWidth={isSmallScreen && isChatRoute ? 32 : 0}
     >
       <Stack
         h="100%"
