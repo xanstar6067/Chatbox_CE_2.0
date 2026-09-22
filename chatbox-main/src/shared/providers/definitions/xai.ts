@@ -9,6 +9,7 @@ export const xaiProvider = defineProvider({
   type: ModelProviderType.OpenAI,
   modelsDevProviderId: 'xai',
   curatedModelIds: [
+    'grok-4.7',
     'grok-4.6',
     'grok-4.5',
     'grok-4.3',
@@ -25,6 +26,11 @@ export const xaiProvider = defineProvider({
     // https://docs.x.ai/developers/models
     // grok-4, grok-4-fast and grok-4-1-fast were retired on 2026-05-15 and now redirect to grok-4.3.
     models: [
+      {
+        modelId: 'grok-4.7',
+        contextWindow: 500_000,
+        capabilities: ['vision', 'tool_use', 'reasoning'],
+      },
       {
         modelId: 'grok-4.6',
         contextWindow: 500_000,

@@ -15,6 +15,11 @@ const XAI_REASONING_CONFIG_BY_MODEL: XAIReasoningConfigByModel[] = [
     defaultLevel: 'low',
   },
   {
+    pattern: /^grok-4\.7(?:-|$)/i,
+    levels: ['low', 'medium', 'high', 'xhigh'],
+    defaultLevel: 'high',
+  },
+  {
     pattern: /^grok-4\.6(?:-|$)/i,
     levels: ['low', 'medium', 'high', 'xhigh'],
     defaultLevel: 'high',
