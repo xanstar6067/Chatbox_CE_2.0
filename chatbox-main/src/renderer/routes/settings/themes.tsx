@@ -150,7 +150,6 @@ const ThemeCard: FC<{
   onDelete?: () => void
 }> = ({ theme, active, realTheme, onSelect, onEdit, onDuplicate, onDelete }) => {
   const { t } = useTranslation()
-  const [menuOpened, setMenuOpened] = useState(false)
   const colors = useMemo(() => resolveThemeColors(theme, realTheme), [theme, realTheme])
 
   const menuItems: ActionMenuItemProps[] = [
@@ -206,18 +205,21 @@ const ThemeCard: FC<{
           <ActionMenu
             items={menuItems}
             position="bottom-end"
-            opened={menuOpened}
-            onChange={setMenuOpened}
             title={theme.builtin ? String(t(theme.name)) : theme.name}
           >
+            {/*
+              The menu opens itself: on a narrow screen ActionMenu is a vaul drawer
+              whose trigger skips its own handler once this one calls
+              preventDefault(), which left Edit/Duplicate/Delete unreachable on
+              Android. stopPropagation() alone still keeps the card from being
+              selected by a tap on the menu button.
+            */}
             <ActionIcon
               variant="transparent"
               size="sm"
               color="chatbox-tertiary"
               onClick={(event) => {
                 event.stopPropagation()
-                event.preventDefault()
-                setMenuOpened((opened) => !opened)
               }}
             >
               <ScalableIcon icon={IconDots} size={14} />

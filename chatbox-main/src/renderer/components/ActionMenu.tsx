@@ -112,7 +112,16 @@ const MobileActionMenu: FC<ActionMenuProps> = ({ children, items, title }) => {
       <Drawer.Trigger asChild>{children}</Drawer.Trigger>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-chatbox-background-mask-overlay" />
-        <Drawer.Content className="flex flex-col h-fit fixed bottom-0 left-0 right-0 outline-none">
+        {/*
+          The portal moves the drawer out of the DOM, but React still bubbles its
+          events up the component tree, so without this a tap on a menu item also
+          reaches the clickable row the menu belongs to. DesktopActionMenu guards
+          its dropdown the same way.
+        */}
+        <Drawer.Content
+          className="flex flex-col h-fit fixed bottom-0 left-0 right-0 outline-none"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="bg-chatbox-background-primary rounded-t-lg">
             <Drawer.Handle />
             {title && (
@@ -183,7 +192,11 @@ const MobileDoubleCheckMenuItem: FC<{
       </Drawer.Trigger>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-chatbox-background-mask-overlay" />
-        <Drawer.Content className="flex flex-col h-fit fixed bottom-0 left-0 right-0 outline-none">
+        {/* Same portal-bubbling guard as the menu drawer above. */}
+        <Drawer.Content
+          className="flex flex-col h-fit fixed bottom-0 left-0 right-0 outline-none"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="bg-chatbox-background-primary rounded-t-lg">
             <Drawer.Handle />
             <Stack className="px-2" gap={0}>
