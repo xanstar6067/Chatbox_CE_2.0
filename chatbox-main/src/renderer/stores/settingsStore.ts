@@ -12,7 +12,11 @@ import { immer } from 'zustand/middleware/immer'
 import { getLogger } from '@/lib/utils'
 import platform from '@/platform'
 import storage from '@/storage'
-import { CHATBOX_AI_DOCUMENT_PARSER_ENABLED, CHATBOX_BUILT_IN_WEB_SEARCH_ENABLED } from '@/variables'
+import {
+  CHATBOX_AI_DOCUMENT_PARSER_ENABLED,
+  CHATBOX_BUILT_IN_WEB_SEARCH_ENABLED,
+  CHATBOX_ERROR_REPORTING_ENABLED,
+} from '@/variables'
 import { mergeProviderSettings, type ProviderSettingsUpdate } from './providerSettings'
 
 const log = getLogger('settings-store')
@@ -42,6 +46,9 @@ function applyBuildSpecificSettings(settings: Settings): Settings {
 
   return {
     ...settings,
+    // The reporting UI is hidden in builds without error reporting, so the flag
+    // must not stay on its default `true` value there.
+    allowReportingAndTracking: CHATBOX_ERROR_REPORTING_ENABLED ? settings.allowReportingAndTracking : false,
     extension,
   }
 }
@@ -152,7 +159,8 @@ export const initSettingsStore = async () => {
         const needsBuildSpecificSettings =
           val &&
           ((!CHATBOX_BUILT_IN_WEB_SEARCH_ENABLED && val.extension.webSearch.provider === 'build-in') ||
-            (!CHATBOX_AI_DOCUMENT_PARSER_ENABLED && val.extension.documentParser?.type === 'chatbox-ai'))
+            (!CHATBOX_AI_DOCUMENT_PARSER_ENABLED && val.extension.documentParser?.type === 'chatbox-ai') ||
+            (!CHATBOX_ERROR_REPORTING_ENABLED && val.allowReportingAndTracking !== false))
         if (needsBuildSpecificSettings) {
           settingsStore.setState(applyBuildSpecificSettings(SettingsSchema.parse(val)))
         }

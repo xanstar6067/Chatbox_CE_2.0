@@ -18,6 +18,12 @@ export const CHATBOX_COMMERCE_LINKS_ENABLED = !IS_ANDROID_FORK_BUILD
 export const CHATBOX_BUILT_IN_WEB_SEARCH_ENABLED = !IS_ANDROID_FORK_BUILD
 export const CHATBOX_AI_SETTINGS_ENABLED = !IS_ANDROID_FORK_BUILD
 export const CHATBOX_AI_DOCUMENT_PARSER_ENABLED = !IS_ANDROID_FORK_BUILD
+// Without the Chatbox AI and MinerU parsers the settings page has a single,
+// non-actionable option on Android, so the whole entry is hidden there.
+export const CHATBOX_DOCUMENT_PARSER_SETTINGS_ENABLED = !IS_ANDROID_FORK_BUILD
+// Crash reports and usage events go to the upstream project's Sentry/analytics
+// accounts, which the fork has no access to. Keep them out of this build.
+export const CHATBOX_ERROR_REPORTING_ENABLED = !IS_ANDROID_FORK_BUILD
 
 // api.chatboxai.app
 export const USE_LOCAL_API = process.env.USE_LOCAL_API || ''

@@ -57,6 +57,24 @@ export function replacePlausibleDomain(): Plugin {
 }
 
 /**
+ * Vite plugin that drops the remote analytics tags from index.html.
+ * The Android Community Edition has no error reporting or usage tracking, so
+ * these scripts would otherwise still phone home on every launch. The inline
+ * `window.plausible` / `gtag` stubs stay, which keeps any residual call a no-op.
+ */
+export function stripAnalyticsScripts(): Plugin {
+  return {
+    name: 'strip-analytics-scripts',
+    transformIndexHtml(html) {
+      return html
+        .replace(/\s*<!-- Google tag \(gtag\.js\) -->/g, '')
+        .replace(/\s*<script[^>]*src="https:\/\/www\.googletagmanager\.com\/[^"]*"[^>]*><\/script>/g, '')
+        .replace(/\s*<script[^>]*src="https:\/\/plausible\.midway\.run\/[^"]*"[^>]*><\/script>/g, '')
+    },
+  }
+}
+
+/**
  * Vite plugin to inject platform-appropriate viewport meta content.
  * Desktop builds omit `height=device-height` and `viewport-fit=cover` which trigger
  * Chromium's Virtual Keyboard API on macOS, causing an empty bottom margin on input focus.
@@ -106,6 +124,8 @@ export default defineConfig(({ mode }) => {
   const isWeb = process.env.CHATBOX_BUILD_PLATFORM === 'web'
   const isMobile = process.env.CHATBOX_BUILD_TARGET === 'mobile_app'
   const isDesktop = !isWeb && !isMobile
+  // Mirrors IS_ANDROID_FORK_BUILD in src/renderer/variables.ts.
+  const isAndroidFork = process.env.CHATBOX_BUILD_PLATFORM === 'android'
 
   return {
     main: {
@@ -212,6 +232,7 @@ export default defineConfig(({ mode }) => {
         react({}),
         dvhToVh(),
         injectViewportContent(isDesktop),
+        isAndroidFork ? stripAnalyticsScripts() : undefined,
         isWeb ? injectBaseTag() : undefined,
         injectReleaseDate(),
         isWeb ? replacePlausibleDomain() : undefined,

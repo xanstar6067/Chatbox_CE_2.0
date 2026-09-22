@@ -1,13 +1,25 @@
 import * as Sentry from '@sentry/react'
 import { getLogger } from '../lib/utils'
+import { CHATBOX_ERROR_REPORTING_ENABLED } from '../variables'
 
 const log = getLogger('GlobalErrorHandler')
+
+/**
+ * Sentry is never initialized in builds without error reporting, so skip the
+ * scope bookkeeping entirely there. Errors still reach the diagnostic log.
+ */
+function withSentryScope(callback: (scope: Sentry.Scope) => void) {
+  if (!CHATBOX_ERROR_REPORTING_ENABLED) {
+    return
+  }
+  Sentry.withScope(callback)
+}
 
 // Global error handler for unhandled errors
 window.addEventListener('error', (event) => {
   log.error('Global error caught:', event.error)
 
-  Sentry.withScope((scope) => {
+  withSentryScope((scope) => {
     scope.setTag('errorType', 'global')
     scope.setLevel('error')
     scope.setContext('errorEvent', {
@@ -25,7 +37,7 @@ window.addEventListener('error', (event) => {
 window.addEventListener('unhandledrejection', (event) => {
   log.error('Unhandled promise rejection:', event.reason)
 
-  Sentry.withScope((scope) => {
+  withSentryScope((scope) => {
     scope.setTag('errorType', 'unhandledRejection')
     scope.setLevel('error')
     scope.setContext('promiseRejection', {
@@ -76,7 +88,7 @@ console.error = (...args: unknown[]) => {
 
         log.error('Console error that might be uncaught:', error)
 
-        Sentry.withScope((scope) => {
+        withSentryScope((scope) => {
           scope.setTag('errorType', 'console')
           scope.setLevel('warning')
           scope.setContext('consoleError', {
@@ -109,7 +121,7 @@ console.error = (...args: unknown[]) => {
 
     log.error('Console error that might be uncaught:', errorMessage)
 
-    Sentry.withScope((scope) => {
+    withSentryScope((scope) => {
       scope.setTag('errorType', 'console')
       scope.setLevel('warning')
       scope.setContext('consoleError', {

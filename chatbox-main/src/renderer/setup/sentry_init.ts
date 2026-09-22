@@ -1,9 +1,12 @@
 import * as Sentry from '@sentry/react'
-import { CHATBOX_BUILD_PLATFORM, CHATBOX_BUILD_TARGET, NODE_ENV } from '@/variables'
 import { initSettingsStore } from '@/stores/settingsStore'
+import { CHATBOX_BUILD_PLATFORM, CHATBOX_BUILD_TARGET, CHATBOX_ERROR_REPORTING_ENABLED, NODE_ENV } from '@/variables'
 import platform from '../platform'
 
 void (async () => {
+  if (!CHATBOX_ERROR_REPORTING_ENABLED) {
+    return
+  }
   try {
     const settings = await initSettingsStore()
     if (!settings.allowReportingAndTracking) {

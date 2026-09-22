@@ -1,7 +1,11 @@
 import { isFirstDay } from '../hooks/useVersion'
-import { initSettingsStore } from '../stores/settingsStore'
 import platform from '../platform'
+import { initSettingsStore } from '../stores/settingsStore'
+import { CHATBOX_ERROR_REPORTING_ENABLED } from '../variables'
 ;(async () => {
+  if (!CHATBOX_ERROR_REPORTING_ENABLED) {
+    return
+  }
   try {
     const settings = await initSettingsStore()
     if (!settings.allowReportingAndTracking) {

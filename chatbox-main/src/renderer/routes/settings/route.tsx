@@ -27,7 +27,7 @@ import { useProviders } from '@/hooks/useProviders'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import platform from '@/platform'
 import { featureFlags } from '@/utils/feature-flags'
-import { CHATBOX_AI_SETTINGS_ENABLED } from '@/variables'
+import { CHATBOX_AI_SETTINGS_ENABLED, CHATBOX_DOCUMENT_PARSER_SETTINGS_ENABLED } from '@/variables'
 
 const ITEMS = [
   ...(CHATBOX_AI_SETTINGS_ENABLED
@@ -81,11 +81,15 @@ const ITEMS = [
         },
       ]
     : []),
-  {
-    key: 'document-parser',
-    label: 'Document Parser',
-    icon: <IconFileText className="w-full h-full" />,
-  },
+  ...(CHATBOX_DOCUMENT_PARSER_SETTINGS_ENABLED
+    ? [
+        {
+          key: 'document-parser',
+          label: 'Document Parser',
+          icon: <IconFileText className="w-full h-full" />,
+        },
+      ]
+    : []),
   {
     key: 'chat',
     label: 'Chat Settings',

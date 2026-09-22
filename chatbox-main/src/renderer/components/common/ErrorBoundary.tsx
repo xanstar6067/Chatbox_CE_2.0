@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/react'
 import React from 'react'
 import { getLogger } from '../../lib/utils'
 import { router } from '../../router'
+import { CHATBOX_ERROR_REPORTING_ENABLED } from '../../variables'
 
 const log = getLogger('ErrorBoundary')
 
@@ -74,7 +75,9 @@ function DefaultErrorFallback({ error, retry }: DefaultErrorFallbackProps) {
         <div className="text-red-500 text-6xl mb-4">⚠️</div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Something went wrong!</h1>
         <p className="text-gray-600 dark:text-gray-400 mb-6">
-          The application encountered an unexpected error. This error has been automatically reported.
+          {CHATBOX_ERROR_REPORTING_ENABLED
+            ? 'The application encountered an unexpected error. This error has been automatically reported.'
+            : 'The application encountered an unexpected error. You can export the details from Settings → General → Diagnostic Logs.'}
         </p>
 
         <div className="space-y-3">
