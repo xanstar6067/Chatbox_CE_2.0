@@ -76,6 +76,8 @@ export interface Platform extends Storage {
   // 日志导出与管理
   exportLogs(): Promise<string> // 返回日志内容
   clearLogs(): Promise<void> // 清空日志
+  /** Write buffered log entries out now; call before relaunching or quitting. */
+  flushLogs(): Promise<void>
 
   ensureAutoLaunch(enable: boolean): Promise<void>
 

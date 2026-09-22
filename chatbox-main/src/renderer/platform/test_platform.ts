@@ -285,6 +285,10 @@ export default class TestPlatform implements Platform {
     // no-op
   }
 
+  public async flushLogs(): Promise<void> {
+    // no-op
+  }
+
   public async ensureAutoLaunch(enable: boolean): Promise<void> {
     // no-op
   }

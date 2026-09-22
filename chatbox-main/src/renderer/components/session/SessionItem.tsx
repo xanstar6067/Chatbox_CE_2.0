@@ -6,6 +6,7 @@ import clsx from 'clsx'
 import { memo, type ReactNode, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
+import { getLogger } from '@/lib/utils'
 import { router } from '@/router'
 import {
   deleteSession as deleteSessionStore,
@@ -17,6 +18,8 @@ import { useUIStore } from '@/stores/uiStore'
 import ActionMenu, { type ActionMenuItemProps } from '../ActionMenu'
 import { AssistantAvatar } from '../common/Avatar'
 import { ScalableIcon } from '../common/ScalableIcon'
+
+const log = getLogger('session-item')
 
 export interface Props {
   session: SessionMeta
@@ -101,7 +104,7 @@ function SessionItem(props: Props) {
               router.navigate({ to: '/', replace: true })
             }
           } catch (error) {
-            console.error('Failed to delete session:', error)
+            log.error(`failed to delete session ${session.id}:`, error)
             deletingRef.current = false
             setDeleting(false)
           }

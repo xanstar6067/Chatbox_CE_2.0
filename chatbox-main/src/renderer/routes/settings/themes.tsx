@@ -11,8 +11,11 @@ import { ScalableIcon } from '@/components/common/ScalableIcon'
 import ThemeEditorModal from '@/components/themes/ThemeEditorModal'
 import ThemePreview from '@/components/themes/ThemePreview'
 import { type AppTheme, getAllThemes, resolveThemeColors } from '@/lib/theme-presets'
+import { getLogger } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useUIStore } from '@/stores/uiStore'
+
+const log = getLogger('themes-settings')
 
 export const Route = createFileRoute('/settings/themes')({
   component: RouteComponent,
@@ -35,9 +38,13 @@ export function RouteComponent() {
   const themes = useMemo(() => getAllThemes(customThemes), [customThemes])
   const activeId = themes.some((theme) => theme.id === themePresetId) ? themePresetId : CLASSIC_THEME_ID
 
-  const selectTheme = (id: string) => setSettings({ themePresetId: id })
+  const selectTheme = (id: string) => {
+    log.info(`selected theme ${id}`)
+    setSettings({ themePresetId: id })
+  }
 
   const deleteTheme = (id: string) => {
+    log.info(`deleted theme ${id}${activeId === id ? ', reverting to the classic theme' : ''}`)
     setSettings({
       customThemes: customThemes.filter((theme) => theme.id !== id),
       ...(activeId === id ? { themePresetId: CLASSIC_THEME_ID } : {}),

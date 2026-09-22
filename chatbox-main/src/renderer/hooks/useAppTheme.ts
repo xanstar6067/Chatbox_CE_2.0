@@ -1,11 +1,14 @@
 import { createTheme, type ThemeOptions } from '@mui/material/styles'
 import { useLayoutEffect, useMemo } from 'react'
 import { applyThemeColors, findTheme } from '@/lib/theme-presets'
+import { getLogger } from '@/lib/utils'
 import { settingsStore, useLanguage, useSettingsStore } from '@/stores/settingsStore'
 import { uiStore, useUIStore } from '@/stores/uiStore'
 import { type Language, Theme, type ThemeColors, type ThemeMode } from '../../shared/types'
 import platform from '../platform'
 import DesktopPlatform from '../platform/desktop_platform'
+
+const log = getLogger('app-theme')
 
 /**
  * Color scheme imposed by the active appearance theme, or `undefined` when the
@@ -62,6 +65,9 @@ export default function useAppTheme() {
 
   useLayoutEffect(() => {
     // paint the active appearance theme over the defaults from globals.css
+    log.info(
+      `applying theme ${activeTheme.id} (${activeTheme.builtin ? 'built-in' : 'custom'}, mode=${activeTheme.mode ?? 'follows setting'})`
+    )
     applyThemeColors(activeTheme.colors)
   }, [activeTheme])
 

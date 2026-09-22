@@ -1,5 +1,8 @@
 import type { CopilotDetail, ImageSource } from '@shared/types'
+import { getLogger } from '@/lib/utils'
 import { getCopilotsMediaStorageKeys } from './copilot-media'
+
+const log = getLogger('backup-media')
 
 /**
  * Avatars and background images are stored as blobs, outside of the key-value
@@ -128,19 +131,26 @@ export async function* streamMediaBackupSection(
 ): AsyncGenerator<string, void, unknown> {
   yield `${JSON.stringify(MEDIA_BACKUP_KEY)}:{"version":1,"blobs":{`
   let isFirstBlob = true
+  let exportedCount = 0
+  let missingCount = 0
+  let failedCount = 0
   for (const key of storageKeys) {
     try {
       const blob = await blobStorage.getBlob(key)
       if (typeof blob !== 'string' || blob === '') {
+        missingCount++
         continue
       }
       yield `${isFirstBlob ? '' : ','}${JSON.stringify(key)}:${JSON.stringify(blob)}`
       isFirstBlob = false
+      exportedCount++
     } catch (error) {
-      console.warn(`Failed to export blob ${key}:`, error)
+      failedCount++
+      log.warn(`failed to export blob ${key}:`, error)
     }
   }
   yield '}}'
+  log.info(`exported ${exportedCount} blobs, ${missingCount} missing, ${failedCount} failed`)
 }
 
 /**
@@ -155,16 +165,20 @@ export async function restoreMediaBackup(
   const section = parseMediaBackupSection(importData[MEDIA_BACKUP_KEY])
   delete importData[MEDIA_BACKUP_KEY]
   if (!section) {
+    log.info('backup has no media section, restoring without images')
     return 0
   }
 
   let restoredCount = 0
+  let skippedCount = 0
   for (const [key, value] of Object.entries(section.blobs)) {
     if (typeof value !== 'string' || value === '' || !isRestorableBlobKey(key)) {
+      skippedCount++
       continue
     }
     await blobStorage.setBlob(key, value)
     restoredCount++
   }
+  log.info(`restored ${restoredCount} blobs, skipped ${skippedCount}`)
   return restoredCount
 }

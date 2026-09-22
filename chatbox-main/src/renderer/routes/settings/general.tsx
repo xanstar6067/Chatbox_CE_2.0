@@ -534,6 +534,9 @@ const ImportExportDataSection = () => {
 
           // 由于即将重启应用，这里不需要清理loading状态
           // props.onCancel() // 导入成功后立即关闭设置窗口，防止用户点击保存、导致设置数据被覆盖
+          // The relaunch would otherwise discard the buffered log of this import,
+          // which is exactly what is needed when a restore goes wrong.
+          await platform.flushLogs()
           platform.relaunch() // 重启应用以生效
         } catch (err) {
           setImportTips(errTip)

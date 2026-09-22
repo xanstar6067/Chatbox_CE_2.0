@@ -233,6 +233,10 @@ export default class DesktopPlatform implements Platform {
     return this.ipc.invoke('clearLogs')
   }
 
+  public async flushLogs(): Promise<void> {
+    // Desktop logs go straight to the main process over IPC, nothing is buffered.
+  }
+
   public async ensureAutoLaunch(enable: boolean) {
     return this.ipc.invoke('ensureAutoLaunch', enable)
   }

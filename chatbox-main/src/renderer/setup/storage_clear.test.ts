@@ -8,6 +8,7 @@ vi.mock('@/platform', () => ({
   default: {
     // 'desktop' keeps the module from scheduling its own startup run in tests
     type: 'desktop',
+    appLog: async () => undefined,
     getStorageType: () => 'web',
     setStoreValue: (key: string, value: unknown) => {
       store.set(key, value)

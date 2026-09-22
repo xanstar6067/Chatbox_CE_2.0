@@ -217,6 +217,7 @@ export async function migrateOnData(dataStore: MigrateStore, canRelaunch = true)
   // 如果需要重启，则重启应用
   if (needRelaunch && canRelaunch) {
     log.info(`migrate: relaunch`)
+    await platform.flushLogs()
     await platform.relaunch()
   }
 }

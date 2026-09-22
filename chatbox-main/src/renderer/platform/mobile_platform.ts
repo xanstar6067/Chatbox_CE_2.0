@@ -246,6 +246,10 @@ export default class MobilePlatform extends MobileSQLiteStorage implements Platf
     return mobileLogger.clearLogs()
   }
 
+  public async flushLogs(): Promise<void> {
+    return mobileLogger.flushNow()
+  }
+
   public async ensureAutoLaunch(enable: boolean) {
     return
   }

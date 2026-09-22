@@ -6,6 +6,9 @@ import {
   type ThemeColorToken,
   type ThemeMode,
 } from '@shared/types'
+import { getLogger } from './utils'
+
+const log = getLogger('theme-presets')
 
 /**
  * Built-in palettes.
@@ -315,8 +318,21 @@ export function getAllThemes(customThemes?: CustomTheme[]): AppTheme[] {
   return [...builtinThemes, ...saved.map(customThemeToAppTheme)]
 }
 
+/** Missing theme ids already reported, so the fallback is logged once per id. */
+const reportedMissingThemeIds = new Set<string>()
+
 export function findTheme(themeId: string | undefined, customThemes?: CustomTheme[]): AppTheme {
-  return getAllThemes(customThemes).find((theme) => theme.id === themeId) ?? builtinThemes[0]
+  const theme = getAllThemes(customThemes).find((theme) => theme.id === themeId)
+  if (theme) {
+    return theme
+  }
+  // A selected theme that no longer exists means the app silently looks different
+  // than the user left it, typically after a restore or a failed settings write.
+  if (themeId && !reportedMissingThemeIds.has(themeId)) {
+    reportedMissingThemeIds.add(themeId)
+    log.warn(`theme ${themeId} not found, falling back to ${builtinThemes[0].id}`)
+  }
+  return builtinThemes[0]
 }
 
 /** Palette actually painted on screen, given the current light/dark mode. */
@@ -338,13 +354,22 @@ export function toCssVariables(colors: ThemeColors): Record<string, string> {
 /** Writes (or clears) the theme overrides on the document root. */
 export function applyThemeColors(colors: ThemeColors | undefined) {
   const root = document.documentElement
+  const missingTokens: ThemeColorToken[] = []
   for (const token of THEME_COLOR_TOKENS) {
     const property = `--chatbox-${token}`
     if (colors) {
+      if (!colors[token]) {
+        missingTokens.push(token)
+      }
       root.style.setProperty(property, colors[token])
     } else {
       root.style.removeProperty(property)
     }
+  }
+  // An incomplete palette paints empty CSS variables, which renders as unstyled
+  // text on an unstyled background — worth naming the exact tokens.
+  if (missingTokens.length) {
+    log.warn(`theme applied with ${missingTokens.length} empty tokens: ${missingTokens.join(', ')}`)
   }
 }
 

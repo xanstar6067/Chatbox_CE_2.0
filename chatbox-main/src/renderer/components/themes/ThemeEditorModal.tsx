@@ -12,8 +12,11 @@ import {
   themeTokenLabels,
   withFallbackColors,
 } from '@/lib/theme-presets'
+import { getLogger } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settingsStore'
 import ThemePreview from './ThemePreview'
+
+const log = getLogger('theme-editor')
 
 export type ThemeEditorModalProps = {
   opened: boolean
@@ -121,6 +124,11 @@ export const ThemeEditorModal: FC<ThemeEditorModalProps> = ({
       // a freshly created theme becomes the active one right away
       setSettings({ customThemes: [...customThemes, created], themePresetId: created.id })
     }
+    log.info(
+      `${editing ? 'updated' : 'created'} theme ${editing?.id ?? 'new'} mode=${mode} base=${baseId}, ${
+        customThemes.length + (editing ? 0 : 1)
+      } custom themes stored`
+    )
     onClose()
   }
 

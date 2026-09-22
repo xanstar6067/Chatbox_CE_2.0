@@ -1,10 +1,13 @@
 import type { CopilotDetail, Message, Session, VideoGeneration } from '@shared/types'
+import { getLogger } from '@/lib/utils'
 import { getSessionMediaStorageKeys, getSettingsMediaStorageKeys } from '@/packages/backup-media'
 import { getCopilotsMediaStorageKeys } from '@/packages/copilot-media'
 import { listAllSessionsMeta } from '@/stores/chatStore'
 import { initSettingsStore, settingsStore } from '@/stores/settingsStore'
 import platform from '../platform'
 import storage, { StorageKey } from '../storage'
+
+const log = getLogger('storage-clear')
 
 // 启动时执行消息图片清理
 // 只有网页版本需要清理，桌面版本存在本地、空间足够大无需清理
@@ -108,7 +111,7 @@ export async function tickStorageTask() {
       cursor = page.nextCursor
     }
   } catch (e) {
-    console.error('storage_clear: failed to scan image generation storage', e)
+    log.error('failed to scan image generation storage, skipping cleanup:', e)
     return
   }
 
@@ -118,6 +121,9 @@ export async function tickStorageTask() {
     if (record.generatedVideo) needDeletedSet.delete(record.generatedVideo)
     if (record.referenceImage) needDeletedSet.delete(record.referenceImage)
   }
+  // This is the only place that deletes stored media, so record what it removed:
+  // it is the first thing to check when a user reports missing images.
+  log.info(`deleting ${needDeletedSet.size} unreferenced blobs of ${storageKeys.length} scanned`)
   for (const key of needDeletedSet) {
     await storage.delBlob(key)
   }

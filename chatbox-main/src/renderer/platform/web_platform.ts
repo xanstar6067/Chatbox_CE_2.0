@@ -150,6 +150,10 @@ export default class WebPlatform extends IndexedDBStorage implements Platform {
     return webLogger.clearLogs()
   }
 
+  public async flushLogs(): Promise<void> {
+    return webLogger.flushNow()
+  }
+
   public async ensureAutoLaunch(enable: boolean) {
     return
   }

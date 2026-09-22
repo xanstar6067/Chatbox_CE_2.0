@@ -7,13 +7,16 @@ import {
 } from '@shared/types'
 import { getDefaultStore } from 'jotai'
 import { omit } from 'lodash'
-import { router } from '@/router'
+import { getLogger } from '@/lib/utils'
 import platform from '@/platform'
+import { router } from '@/router'
 import { sortSessionRecords } from '@/storage/SessionMetaStorage'
 import * as atoms from '../atoms'
 import * as chatStore from '../chatStore'
 import * as scrollActions from '../scrollActions'
 import { initEmptyChatSession, initEmptyPictureSession } from '../sessionHelpers'
+
+const log = getLogger('session-crud')
 
 /**
  * Create a new session and switch to it
@@ -131,10 +134,12 @@ export function switchCurrentSession(sessionId: string) {
  * Computes a new sortOrder for the moved item based on its new neighbors.
  */
 export async function reorderSessions(oldIndex: number, newIndex: number) {
-  console.debug('sessionActions', 'reorderSessions', oldIndex, newIndex)
   const sessions = await chatStore.listSessionsMeta()
   const movedSession = sessions[oldIndex]
-  if (!movedSession || oldIndex === newIndex) return
+  if (!movedSession || oldIndex === newIndex) {
+    log.info(`reorder ${oldIndex} -> ${newIndex} skipped (${movedSession ? 'same position' : 'no session at index'})`)
+    return
+  }
   const reorderedSessions = [...sessions]
   reorderedSessions.splice(oldIndex, 1)
   reorderedSessions.splice(newIndex, 0, movedSession)
@@ -148,6 +153,7 @@ export async function reorderSessions(oldIndex: number, newIndex: number) {
 
   let newSortOrder: number
   if (targetGroupIndex < 0 || reorderedSessions.length === 0) {
+    log.warn(`reorder ${oldIndex} -> ${newIndex} skipped: session ${movedSession.id} not found in its own group`)
     return
   } else if (!before && !after) {
     newSortOrder = Date.now()
@@ -171,6 +177,9 @@ export async function reorderSessions(oldIndex: number, newIndex: number) {
     )
     return sortSessionRecords(updated)
   })
+  log.info(
+    `moved session ${movedSession.id} from ${oldIndex} to ${newIndex}, sortOrder=${newSortOrder}, starred=${nextStarred}`
+  )
 }
 
 /**
