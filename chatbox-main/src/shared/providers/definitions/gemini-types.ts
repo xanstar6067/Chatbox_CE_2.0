@@ -1,3 +1,5 @@
+import { getGeminiMajorVersion } from '../../utils/google-thinking'
+
 /**
  * Gemini image generation aspect ratio values supported by the Google AI SDK.
  * @see https://ai.google.dev/gemini-api/docs/image-generation#aspect_ratios
@@ -19,23 +21,13 @@ export function buildGeminiImageConfig(
 }
 
 /**
- * Google deprecated temperature, topP and topK starting with Gemini 3.6 Flash and
- * Gemini 3.5 Flash-Lite. Those models ignore the fields, and later generations will
- * reject them with HTTP 400, so they must not be sent.
+ * Google deprecated temperature, topP and topK for the Gemini 3 series: Gemini 3.6 Flash
+ * and later ignore them, upcoming models reject them with HTTP 400, and Google asks to
+ * drop them so the model uses its own defaults. Only Gemini 1.x/2.x and non-Gemini models
+ * served through the same API (e.g. Gemma) still receive them.
  * @see https://ai.google.dev/gemini-api/docs/changelog
  */
 export function supportsGeminiSamplingParameters(modelId: string): boolean {
-  const match = modelId.toLowerCase().match(/^gemini-(\d+)(?:\.(\d+))?-(.+)$/)
-  if (!match) {
-    return true
-  }
-  const major = Number(match[1])
-  const minor = Number(match[2] ?? 0)
-  if (major !== 3) {
-    return major < 3
-  }
-  if (minor >= 6) {
-    return false
-  }
-  return !(minor === 5 && match[3].startsWith('flash-lite'))
+  const major = getGeminiMajorVersion(modelId)
+  return major === undefined || major < 3
 }

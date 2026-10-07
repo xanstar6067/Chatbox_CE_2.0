@@ -11,6 +11,16 @@ describe('google-thinking utils', () => {
     expect(getGoogleThinkingMode('gemini-2.5-flash')).toBe('budget')
     expect(getGoogleThinkingMode('gemini-3-pro-preview')).toBe('level')
     expect(getGoogleThinkingMode('gemini-2.0-flash')).toBe('none')
+    // Later generations and version-less aliases must never receive thinkingBudget.
+    expect(getGoogleThinkingMode('gemini-4-flash')).toBe('level')
+    expect(getGoogleThinkingMode('gemini-flash-latest')).toBe('level')
+    expect(getGoogleThinkingMode('gemma-3-27b-it')).toBe('none')
+  })
+
+  it('drops thinkingBudget for level-mode models without a known level matrix', () => {
+    expect(normalizeGoogleThinkingConfig('gemini-4-flash', { thinkingBudget: 5000, includeThoughts: true })).toEqual({
+      includeThoughts: true,
+    })
   })
 
   it('returns the documented thinking levels for supported Gemini 3 models', () => {

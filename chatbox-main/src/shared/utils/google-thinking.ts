@@ -57,14 +57,29 @@ const GOOGLE_THINKING_CONFIG_BY_MODEL: Array<{
   },
 ]
 
-export function getGoogleThinkingMode(modelId: string): GoogleThinkingMode {
+/**
+ * Major generation of a Gemini model ID. Version-less aliases such as `gemini-flash-latest`
+ * track the newest generation and return Infinity; non-Gemini IDs return undefined.
+ */
+export function getGeminiMajorVersion(modelId: string): number | undefined {
   const id = modelId.toLowerCase()
-  if (id.startsWith('gemini-3')) {
-    return 'level'
+  const version = id.match(/^gemini-(\d+)(?:\.\d+)?-/)
+  if (version) {
+    return Number(version[1])
+  }
+  return /^gemini-[a-z]/.test(id) ? Number.POSITIVE_INFINITY : undefined
+}
+
+export function getGoogleThinkingMode(modelId: string): GoogleThinkingMode {
+  if (modelId.toLowerCase().startsWith('gemini-2.5')) {
+    return 'budget'
   }
 
-  if (id.startsWith('gemini-2.5')) {
-    return 'budget'
+  // Gemini 3 and every later generation take thinkingLevel; upcoming models reject
+  // thinkingBudget with 400 INVALID_ARGUMENT instead of remapping it.
+  const major = getGeminiMajorVersion(modelId)
+  if (major !== undefined && major >= 3) {
+    return 'level'
   }
 
   return 'none'

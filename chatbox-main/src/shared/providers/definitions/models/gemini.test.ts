@@ -195,15 +195,24 @@ describe('Gemini sampling parameters', () => {
     )
   }
 
-  it('omits the deprecated sampling fields for Gemini 3.6 Flash, 3.5 Flash-Lite and later', () => {
-    for (const modelId of ['gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-4-flash']) {
+  it('omits the deprecated sampling fields for Gemini 3, later generations and latest aliases', () => {
+    for (const modelId of [
+      'gemini-3-pro-preview',
+      'gemini-3.1-pro-preview',
+      'gemini-3.5-flash',
+      'gemini-3.6-flash',
+      'gemini-3.8-flash',
+      'gemini-4-flash',
+      'gemini-flash-latest',
+    ]) {
+      expect(supportsGeminiSamplingParameters(modelId)).toBe(false)
       const settings = createChatModel({ modelId, capabilities: ['reasoning'] }).exposeCallSettings()
       expect(settings).toMatchObject({ temperature: undefined, topP: undefined, maxOutputTokens: 2048 })
     }
   })
 
   it('keeps sampling fields for models that still honor them', () => {
-    for (const modelId of ['gemini-3.5-flash', 'gemini-3.1-pro-preview', 'gemini-3.1-flash-lite', 'gemini-2.5-pro']) {
+    for (const modelId of ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-1.5-pro-latest', 'gemma-3-27b-it']) {
       expect(supportsGeminiSamplingParameters(modelId)).toBe(true)
       const settings = createChatModel({ modelId, capabilities: ['reasoning'] }).exposeCallSettings()
       expect(settings).toMatchObject({ temperature: 0.4, topP: 0.8 })
@@ -216,5 +225,14 @@ describe('Gemini sampling parameters', () => {
     })
     // `minimal` is not available on Gemini 3.8 Flash, so the documented default is used.
     expect(settings.providerOptions?.google?.thinkingConfig).toEqual({ thinkingLevel: 'medium', includeThoughts: true })
+  })
+
+  it('never sends a stale thinkingBudget to newer Gemini generations', () => {
+    for (const modelId of ['gemini-4-flash', 'gemini-flash-latest']) {
+      const settings = createChatModel({ modelId, capabilities: ['reasoning'] }).exposeCallSettings({
+        providerOptions: { google: { thinkingConfig: { thinkingBudget: 5000, includeThoughts: true } } },
+      })
+      expect(settings.providerOptions?.google?.thinkingConfig).toEqual({ includeThoughts: true })
+    }
   })
 })
