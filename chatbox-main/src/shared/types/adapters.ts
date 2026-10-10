@@ -1,5 +1,5 @@
-import type { SentryAdapter } from '../utils/sentry_adapter'
 import type { OAuthCredentials } from '../oauth/types'
+import type { SentryAdapter } from '../utils/sentry_adapter'
 
 export interface ApiRequestOptions {
   url: string
@@ -31,6 +31,26 @@ export interface RequestAdapter {
   apiRequest(options: ApiRequestOptions): Promise<Response>
 }
 
+/** `chat` marks replies generated in chat sessions; everything else (titles, summaries, tools, tests) is `other`. */
+export type UsagePurpose = 'chat' | 'other'
+
+/** Token usage of one completed model request, reported for local usage statistics. */
+export interface UsageRecord {
+  /** Provider id; filled in by getModel() */
+  provider?: string
+  modelId: string
+  /** Human-readable model name when the provider config has one */
+  modelLabel?: string
+  purpose: UsagePurpose
+  timestamp: number
+  inputTokens?: number
+  outputTokens?: number
+  totalTokens?: number
+  reasoningTokens?: number
+  cacheReadTokens?: number
+  cacheWriteTokens?: number
+}
+
 export interface ModelDependencies {
   request: RequestAdapter
   storage: StorageAdapter
@@ -39,4 +59,6 @@ export interface ModelDependencies {
   oauth?: OAuthAdapter
   /** Current platform type, used for OAuth auth resolution */
   platformType?: 'desktop' | 'web' | 'mobile'
+  /** Receives the usage of every completed model request (one call per request step) */
+  recordUsage?: (record: UsageRecord) => void
 }

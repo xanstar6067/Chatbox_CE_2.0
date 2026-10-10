@@ -5,6 +5,7 @@ import { createAfetch } from '@shared/request/request'
 import type { SessionSettings } from '@shared/types'
 import type { ApiRequestOptions, ModelDependencies } from '@shared/types/adapters'
 import { getOS } from '@/packages/navigator'
+import { recordUsage } from '@/packages/usage-stats'
 import platform from '@/platform'
 import storage from '@/storage'
 import { StorageKeyGenerator } from '@/storage/StoreStorage'
@@ -118,6 +119,7 @@ export async function createModelDependencies(): Promise<ModelDependencies> {
           }
         : undefined,
     platformType: platform.type,
+    recordUsage,
   }
 }
 

@@ -190,6 +190,45 @@ describe('OpenRouter', () => {
     ])
   })
 
+  it('reports usage of every completed request', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            id: 'gen-1',
+            model: 'anthropic/claude-opus-5',
+            choices: [{ index: 0, message: { role: 'assistant', content: 'ok' }, finish_reason: 'stop' }],
+            usage: {
+              prompt_tokens: 1000,
+              completion_tokens: 50,
+              total_tokens: 1050,
+              prompt_tokens_details: { cached_tokens: 800 },
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+    )
+    vi.stubGlobal('fetch', fetch)
+    const dependencies = { ...createDependencies(), recordUsage: vi.fn() }
+    const model = createModel({ modelId: 'anthropic/claude-opus-5', nickname: 'Claude Opus 5' }, dependencies, false)
+
+    await model.chat(conversation, { usagePurpose: 'chat' })
+
+    expect(dependencies.recordUsage).toHaveBeenCalledTimes(1)
+    expect(dependencies.recordUsage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        modelId: 'anthropic/claude-opus-5',
+        modelLabel: 'Claude Opus 5',
+        purpose: 'chat',
+        inputTokens: 1000,
+        outputTokens: 50,
+        totalTokens: 1050,
+        cacheReadTokens: 800,
+      })
+    )
+  })
+
   it('does not add cache_control for models with automatic caching', async () => {
     const request = await captureChatRequest('google/gemini-3.8-flash', conversation)
 

@@ -4,6 +4,7 @@ import {
   IconBook,
   IconBox,
   IconCategory,
+  IconChartBar,
   IconChevronLeft,
   IconChevronRight,
   IconCircleDottedLetterM,
@@ -94,6 +95,11 @@ const ITEMS = [
     key: 'chat',
     label: 'Chat Settings',
     icon: <IconMessages className="w-full h-full" />,
+  },
+  {
+    key: 'usage',
+    label: 'Usage Statistics',
+    icon: <IconChartBar className="w-full h-full" />,
   },
   ...(platform.type === 'mobile'
     ? []

@@ -139,6 +139,11 @@ export function getModel(
     throw new Error('Model provider must not be empty.')
   }
 
+  const recordUsage = dependencies.recordUsage
+  if (recordUsage) {
+    dependencies = { ...dependencies, recordUsage: (record) => recordUsage({ ...record, provider }) }
+  }
+
   // Check if provider is registered in the new registry
   const providerDefinition = getProviderDefinition(provider)
 

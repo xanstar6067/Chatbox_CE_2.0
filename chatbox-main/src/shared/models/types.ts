@@ -11,6 +11,7 @@ import {
   type VideoGenerationJob,
 } from 'src/shared/types'
 import { z } from 'zod'
+import type { UsagePurpose } from '../types/adapters'
 
 export interface ModelInterface {
   name: string
@@ -52,6 +53,7 @@ export const CallChatCompletionOptionsSchema = z.object({
 
 export interface CallChatCompletionOptions<Tools extends ToolSet = ToolSet> {
   sessionId?: string
+  usagePurpose?: UsagePurpose
   signal?: AbortSignal
   onResultChange?: OnResultChange
   onStatusChange?: OnStatusChange
@@ -77,6 +79,7 @@ export type OnStatusChange = (status: MessageStatus | null) => void
 // New types for chatStream() API
 export interface ChatStreamOptions {
   sessionId?: string
+  usagePurpose?: UsagePurpose
   signal?: AbortSignal
   tools?: ToolSet
   providerOptions?: ProviderOptions

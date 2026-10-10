@@ -209,6 +209,7 @@ async function generateTaskResponse(taskId: string, targetMsg: Message, contextM
     updateTaskQueryCache(queryKey, targetMsg)
 
     const chatOptions: ChatStreamOptions = {
+      usagePurpose: 'chat',
       sessionId: taskId,
       signal: abortController.signal,
       webSearchMode: activeWebSearchMode === 'disabled' ? undefined : activeWebSearchMode,

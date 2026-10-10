@@ -204,6 +204,7 @@ export async function orchestrateGeneration(
     updateStreamingCache(sessionId, targetMsg)
 
     const chatOptions: ChatStreamOptions = {
+      usagePurpose: 'chat',
       sessionId: session.id,
       signal: controller.signal,
       providerOptions: settings.providerOptions,

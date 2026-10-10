@@ -28,7 +28,7 @@ import type {
   ProviderModelInfo,
   StreamTextResult,
 } from '../types'
-import type { ModelDependencies } from '../types/adapters'
+import type { ModelDependencies, UsagePurpose } from '../types/adapters'
 import { ApiError, ChatboxAIAPIError } from './errors'
 import type {
   CallChatCompletionOptions,
@@ -186,6 +186,31 @@ export default abstract class AbstractAISDKModel implements ModelInterface {
     return {}
   }
 
+  /** Reports one finished request step (each tool-call round trip is a separate API request). */
+  private recordStepUsage(usage: LanguageModelUsage | undefined, purpose: UsagePurpose | undefined) {
+    const recordUsage = this.dependencies.recordUsage
+    if (!recordUsage) {
+      return
+    }
+    try {
+      recordUsage({
+        modelId: this.options.model.modelId,
+        modelLabel: this.options.model.nickname,
+        purpose: purpose ?? 'other',
+        timestamp: Date.now(),
+        inputTokens: usage?.inputTokens,
+        outputTokens: usage?.outputTokens,
+        totalTokens: usage?.totalTokens,
+        reasoningTokens: usage?.outputTokenDetails?.reasoningTokens ?? usage?.reasoningTokens,
+        cacheReadTokens: usage?.inputTokenDetails?.cacheReadTokens ?? usage?.cachedInputTokens,
+        cacheWriteTokens: usage?.inputTokenDetails?.cacheWriteTokens,
+      })
+    } catch (error) {
+      // Statistics must never break a model call
+      console.error('Failed to record model usage', error)
+    }
+  }
+
   public async chat(messages: ModelMessage[], options: CallChatCompletionOptions): Promise<StreamTextResult> {
     try {
       return await this._callChatCompletion(messages, options)
@@ -329,6 +354,9 @@ export default abstract class AbstractAISDKModel implements ModelInterface {
       nextChunk = streamIterator.next()
       if (chunk.type === 'error') {
         this.handleError(chunk.error)
+      }
+      if (chunk.type === 'finish-step') {
+        this.recordStepUsage(chunk.usage, options.usagePurpose)
       }
 
       yield chunk
@@ -719,6 +747,9 @@ export default abstract class AbstractAISDKModel implements ModelInterface {
         // Handle error chunks
         if (chunk.type === 'error') {
           this.handleError(chunk.error)
+        }
+        if (chunk.type === 'finish-step') {
+          this.recordStepUsage(chunk.usage, options.usagePurpose)
         }
 
         const chunkResult = await this.processStreamChunk(
