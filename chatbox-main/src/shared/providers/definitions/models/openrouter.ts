@@ -1,11 +1,17 @@
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
-import { extractReasoningMiddleware, wrapLanguageModel } from 'ai'
+import { extractReasoningMiddleware, type JSONValue, type ModelMessage, type ToolSet, wrapLanguageModel } from 'ai'
 import AbstractAISDKModel, { type CallSettings } from '../../../models/abstract-ai-sdk'
+import { addOpenRouterCacheControl } from '../../../models/anthropic-cache'
 import { ApiError } from '../../../models/errors'
 import { fetchRemoteModels } from '../../../models/openai-compatible'
-import type { CallChatCompletionOptions, NativeWebSearchConfig } from '../../../models/types'
+import type {
+  CallChatCompletionOptions,
+  ChatStreamOptions,
+  ModelStreamPart,
+  NativeWebSearchConfig,
+} from '../../../models/types'
 import { apiErrorMessage, responseToVideoDataUrl } from '../../../models/video'
-import type { ProviderModelInfo, VideoGenerationInput, VideoGenerationJob } from '../../../types'
+import type { ProviderModelInfo, StreamTextResult, VideoGenerationInput, VideoGenerationJob } from '../../../types'
 import type { ModelDependencies } from '../../../types/adapters'
 
 const OPENROUTER_WEB_SEARCH_TOOL = {
@@ -61,6 +67,65 @@ export function createOpenRouterWebSearchFetch(baseFetch: FetchFunction): FetchF
   }
 }
 
+/**
+ * Anthropic and Alibaba models on OpenRouter only cache prompts with explicit
+ * `cache_control` breakpoints; other upstreams cache automatically. Free
+ * variants are skipped: they are not billed and may be served by providers
+ * without cache support.
+ */
+export function isOpenRouterExplicitCacheModel(modelId: string): boolean {
+  const id = modelId.replace(/^~/, '')
+  return /^(anthropic|qwen)\//.test(id) && !id.endsWith(':free')
+}
+
+function moveCacheControlIntoContent(message: unknown): unknown {
+  if (typeof message !== 'object' || message === null || Array.isArray(message)) {
+    return message
+  }
+  const { cache_control: cacheControl, ...rest } = message as Record<string, unknown>
+  if (cacheControl == null || typeof rest.content !== 'string' || rest.content.length === 0) {
+    return message
+  }
+  return { ...rest, content: [{ type: 'text', text: rest.content, cache_control: cacheControl }] }
+}
+
+/**
+ * The OpenRouter AI SDK puts `cache_control` of system and assistant messages
+ * on the message itself, next to plain string content. OpenRouter documents
+ * breakpoints only on content parts, so move the marker into a text part.
+ */
+export function createOpenRouterCacheControlFetch(baseFetch: FetchFunction): FetchFunction {
+  return (input, init) => {
+    if (typeof init?.body !== 'string') {
+      return baseFetch(input, init)
+    }
+
+    try {
+      const payload = JSON.parse(init.body) as unknown
+      if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
+        return baseFetch(input, init)
+      }
+
+      const request = payload as Record<string, unknown>
+      if (!Array.isArray(request.messages)) {
+        return baseFetch(input, init)
+      }
+
+      const messages = request.messages.map(moveCacheControlIntoContent)
+      if (messages.every((message, index) => message === (request.messages as unknown[])[index])) {
+        return baseFetch(input, init)
+      }
+
+      return baseFetch(input, {
+        ...init,
+        body: JSON.stringify({ ...request, messages }),
+      })
+    } catch {
+      return baseFetch(input, init)
+    }
+  }
+}
+
 interface Options {
   apiKey: string
   apiHost?: string
@@ -87,25 +152,34 @@ export default class OpenRouter extends AbstractAISDKModel {
       topP: this.options.topP,
       maxOutputTokens: this.options.maxOutputTokens,
     }
+    // The OpenRouter SDK spreads providerOptions.openrouter into the request body.
+    const openrouter: Record<string, JSONValue> = {}
     const { reasoningEffort, modelId } = options.providerOptions?.openrouter || {}
     if (reasoningEffort && (!modelId || modelId === this.options.model.modelId)) {
-      // The OpenRouter SDK spreads providerOptions.openrouter into the request
-      // body, and OpenRouter maps the unified effort onto each upstream model.
+      // OpenRouter maps the unified effort onto each upstream model.
       // `effort: 'none'` is rejected by part of the upstream models (Anthropic among
       // them), so reasoning is disabled through the universally accepted `enabled` flag.
-      settings.providerOptions = {
-        openrouter: {
-          reasoning:
-            reasoningEffort === 'none'
-              ? { enabled: false, exclude: true }
-              : { effort: reasoningEffort, exclude: false },
-        },
-      }
+      openrouter.reasoning =
+        reasoningEffort === 'none' ? { enabled: false, exclude: true } : { effort: reasoningEffort, exclude: false }
+    }
+    if (options.sessionId) {
+      // Sticky routing: keeps a chat on the same upstream provider so its prompt cache stays warm.
+      openrouter.session_id = options.sessionId
+    }
+    if (Object.keys(openrouter).length > 0) {
+      settings.providerOptions = { openrouter }
     }
     return settings
   }
 
   protected getProvider(options: CallChatCompletionOptions = {}) {
+    let fetch: FetchFunction | undefined
+    if (isOpenRouterExplicitCacheModel(this.options.model.modelId)) {
+      fetch = createOpenRouterCacheControlFetch((input, init) => globalThis.fetch(input, init))
+    }
+    if (options.webSearchMode === 'model') {
+      fetch = createOpenRouterWebSearchFetch(fetch ?? ((input, init) => globalThis.fetch(input, init)))
+    }
     return createOpenRouter({
       apiKey: this.options.apiKey,
       baseURL: this.openRouterBase(),
@@ -113,12 +187,23 @@ export default class OpenRouter extends AbstractAISDKModel {
         'HTTP-Referer': 'https://chatboxai.app',
         'X-Title': 'Chatbox AI',
       },
-      ...(options.webSearchMode === 'model'
-        ? {
-            fetch: createOpenRouterWebSearchFetch((input, init) => globalThis.fetch(input, init)),
-          }
-        : {}),
+      ...(fetch ? { fetch } : {}),
     })
+  }
+
+  public async chat(messages: ModelMessage[], options: CallChatCompletionOptions): Promise<StreamTextResult> {
+    return super.chat(this.addCacheControl(messages), options)
+  }
+
+  public async *chatStream<T extends ToolSet>(
+    messages: ModelMessage[],
+    options: ChatStreamOptions
+  ): AsyncGenerator<ModelStreamPart<T>> {
+    yield* super.chatStream<T>(this.addCacheControl(messages), options)
+  }
+
+  private addCacheControl(messages: ModelMessage[]) {
+    return isOpenRouterExplicitCacheModel(this.options.model.modelId) ? addOpenRouterCacheControl(messages) : messages
   }
 
   protected getChatModel(options: CallChatCompletionOptions = {}) {

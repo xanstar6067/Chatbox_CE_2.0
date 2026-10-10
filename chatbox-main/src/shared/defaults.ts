@@ -73,6 +73,7 @@ export function settings(): Settings {
     showModelName: true,
     showMessageTimestamp: false,
     showFirstTokenLatency: false,
+    showTokenCacheDetails: false,
     showAvatar: true,
     // messageLayout: 'left' as const, // 不设置默认值，这样可以通过判断这个值是否为空来判断是否通过了新功能引导
     userAvatarKey: '',

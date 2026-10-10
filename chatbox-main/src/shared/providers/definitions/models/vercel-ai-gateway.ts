@@ -1,7 +1,10 @@
 import { createGatewayProvider } from '@ai-sdk/gateway'
+import type { ModelMessage, ToolSet } from 'ai'
 import AbstractAISDKModel from '../../../models/abstract-ai-sdk'
+import { addAnthropicCacheControl } from '../../../models/anthropic-cache'
+import type { CallChatCompletionOptions, ChatStreamOptions, ModelStreamPart } from '../../../models/types'
 import { createFetchWithProxy } from '../../../models/utils/fetch-proxy'
-import type { ProviderModelInfo } from '../../../types'
+import type { ProviderModelInfo, StreamTextResult } from '../../../types'
 import type { ModelDependencies } from '../../../types/adapters'
 
 interface Options {
@@ -44,6 +47,23 @@ export default class VercelAIGateway extends AbstractAISDKModel {
   protected getChatModel() {
     const provider = this.getProvider()
     return provider.languageModel(this.options.model.modelId)
+  }
+
+  // The gateway forwards message providerOptions to the upstream provider, and
+  // Claude caches prompts only at explicit cache breakpoints.
+  public async chat(messages: ModelMessage[], options: CallChatCompletionOptions): Promise<StreamTextResult> {
+    return super.chat(this.addCacheControl(messages), options)
+  }
+
+  public async *chatStream<T extends ToolSet>(
+    messages: ModelMessage[],
+    options: ChatStreamOptions
+  ): AsyncGenerator<ModelStreamPart<T>> {
+    yield* super.chatStream<T>(this.addCacheControl(messages), options)
+  }
+
+  private addCacheControl(messages: ModelMessage[]) {
+    return this.options.model.modelId.startsWith('anthropic/') ? addAnthropicCacheControl(messages) : messages
   }
 
   public async listModels(): Promise<ProviderModelInfo[]> {

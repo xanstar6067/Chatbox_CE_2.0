@@ -1,10 +1,20 @@
 import NiceModal from '@ebay/nice-modal-react'
-import { ActionIcon, type ActionIconProps, Flex, Image as Img, Loader, Text, Tooltip as Tooltip1 } from '@mantine/core'
+import {
+  ActionIcon,
+  type ActionIconProps,
+  Flex,
+  Image as Img,
+  Loader,
+  Popover,
+  Text,
+  Tooltip as Tooltip1,
+} from '@mantine/core'
 import { Box, Grid, useTheme } from '@mui/material'
 import type { Message, MessagePicture, MessageToolCallPart, SessionType } from '@shared/types'
 import { getMessageText } from '@shared/utils/message'
 import {
   IconArrowDown,
+  IconBolt,
   IconBug,
   IconCode,
   IconCopy,
@@ -25,7 +35,18 @@ import * as dateFns from 'date-fns'
 import { concat } from 'lodash'
 import type { UIElementData } from 'photoswipe'
 import type React from 'react'
-import { type FC, forwardRef, type MouseEventHandler, memo, useCallback, useMemo, useRef, useState } from 'react'
+import {
+  type ElementType,
+  type FC,
+  forwardRef,
+  type MouseEventHandler,
+  memo,
+  type ReactNode,
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import { Gallery, Item as GalleryItem } from 'react-photoswipe-gallery'
 import { trackJkClickEvent } from '@/analytics/jk'
@@ -53,6 +74,7 @@ import { ReasoningContentUI, ToolCallPartUI, WebSearchGroupUI } from '../message
 import { MessageAttachmentGrid } from './MessageAttachmentGrid'
 import MessageErrTips from './MessageErrTips'
 import MessageStatuses from './MessageLoading'
+import { getTokenUsageBreakdown, type TokenUsageBreakdown, TokenUsageTooltipContent } from './TokenUsageTooltip'
 
 interface Props {
   id?: string
@@ -90,6 +112,7 @@ const _Message: FC<Props> = (props) => {
     showWordCount,
     showTokenUsed,
     showFirstTokenLatency,
+    showTokenCacheDetails,
     enableMarkdownRendering,
     enableLaTeXRendering,
     enableMermaidRendering,
@@ -190,14 +213,24 @@ const _Message: FC<Props> = (props) => {
 
   // Units like "tokens", "words", "tkn", "s" are intentionally kept as hardcoded English
   // because they are technical/universal abbreviations that remain readable across all locales.
-  const tips: { label: string; tooltip?: string }[] = []
+  const tips: { label: string; tooltip?: ReactNode; icon?: ElementType<IconProps> }[] = []
+  let tokenUsageBreakdown: TokenUsageBreakdown | null = null
   if (props.sessionType === 'chat' || !props.sessionType) {
     if (showModelName && props.msg.role === 'assistant') {
       tips.push({ label: props.msg.model || 'unknown', tooltip: t('Model') as string })
     }
     if (showTokenUsed && msg.role === 'assistant' && !msg.generating) {
       const tokens = msg.usage?.totalTokens ? msg.usage.totalTokens : msg.tokensUsed
-      if (tokens) tips.push({ label: `${tokens} tokens`, tooltip: t('Total tokens consumed') as string })
+      if (tokens && showTokenCacheDetails) {
+        tokenUsageBreakdown = getTokenUsageBreakdown(msg.usage, tokens)
+        tips.push({
+          label: `${tokens} tokens`,
+          tooltip: <TokenUsageTooltipContent breakdown={tokenUsageBreakdown} />,
+          icon: tokenUsageBreakdown.cacheReadTokens ? IconBolt : undefined,
+        })
+      } else if (tokens) {
+        tips.push({ label: `${tokens} tokens`, tooltip: t('Total tokens consumed') as string })
+      }
     }
     if (showWordCount && !msg.generating) {
       const wc = msg.wordCount !== undefined ? msg.wordCount : countWord(getMessageText(msg))
@@ -394,6 +427,7 @@ const _Message: FC<Props> = (props) => {
     ]
   )
   const [actionMenuOpened, setActionMenuOpened] = useState(false)
+  const [tokenInfoOpened, setTokenInfoOpened] = useState(false)
 
   const isUserBubble = isBubbleLayout && msg.role === 'user'
   const statusElements = <MessageStatuses statuses={msg.status} />
@@ -552,7 +586,16 @@ const _Message: FC<Props> = (props) => {
     tips.map((tip, i) => {
       const text = (
         <Text key={i} size="11px" c="chatbox-tertiary" ff="monospace" lh={1.4} className="whitespace-nowrap">
-          {i > 0 ? `· ${tip.label}` : tip.label}
+          {i > 0 && '· '}
+          {tip.icon && (
+            <ScalableIcon
+              icon={tip.icon}
+              size={11}
+              className="text-chatbox-tint-brand"
+              style={{ verticalAlign: '-1px', marginRight: 2 }}
+            />
+          )}
+          {tip.label}
         </Text>
       )
       return tip.tooltip ? (
@@ -570,16 +613,17 @@ const _Message: FC<Props> = (props) => {
       m="4px -4px -4px -4px"
       className={clsx(
         'group-hover/message:opacity-100 opacity-0 transition-opacity',
-        actionMenuOpened || buttonGroup === 'always' ? 'opacity-100' : '',
+        actionMenuOpened || tokenInfoOpened || buttonGroup === 'always' ? 'opacity-100' : '',
         isSmallScreen ? 'sticky bottom-4' : ''
       )}
       align="center"
     >
+      {/* The own compositing layer keeps Android WebView from painting the sticky bar horizontally squeezed. */}
       <Flex
         gap={0}
         className={
           isSmallScreen
-            ? 'p-xxs bg-chatbox-background-primary rounded-md border-[0.5px] border-solid border-chatbox-border-primary shadow-sm'
+            ? 'p-xxs bg-chatbox-background-primary rounded-md border-[0.5px] border-solid border-chatbox-border-primary shadow-sm [transform:translateZ(0)]'
             : ''
         }
       >
@@ -597,6 +641,28 @@ const _Message: FC<Props> = (props) => {
         )}
         {!msg.generating && props.sessionType === 'picture' && msg.role === 'assistant' && (
           <MessageActionIcon icon={IconPhotoPlus} tooltip={t('Generate More Images Below')} onClick={onGenerateMore} />
+        )}
+        {tokenUsageBreakdown && (
+          // Tap target for the token usage details: the tooltip on the token count only opens on hover.
+          <Popover
+            opened={tokenInfoOpened}
+            onChange={setTokenInfoOpened}
+            position="top"
+            withArrow
+            shadow="md"
+            radius="md"
+          >
+            <Popover.Target>
+              <MessageActionIcon
+                icon={IconInfoCircle}
+                tooltip={t('Token usage')}
+                onClick={() => setTokenInfoOpened((opened) => !opened)}
+              />
+            </Popover.Target>
+            <Popover.Dropdown p="xs">
+              <TokenUsageTooltipContent breakdown={tokenUsageBreakdown} />
+            </Popover.Dropdown>
+          </Popover>
         )}
         <ActionMenu
           items={actionMenuItems}

@@ -1126,5 +1126,18 @@
   "Warning tint": "Оттенок предупреждения",
   "Warning tint (hover)": "Оттенок предупреждения (наведение)",
   "Overlay mask": "Маска затемнения",
-  "Lighten mask": "Маска осветления"
+  "Lighten mask": "Маска осветления",
+  "Show prompt cache details": "Показать данные кэша промпта",
+  "Adds a prompt cache breakdown to the token usage tooltip and an info button under replies": "Добавляет разбивку кэша промпта в подсказку расхода токенов и кнопку ⓘ под ответами",
+  "Token usage": "Расход токенов",
+  "{{percent}}% from cache": "{{percent}}% из кэша",
+  "The provider did not report prompt cache usage": "Провайдер не сообщил данные о кэше промпта",
+  "The prompt was cached for the next messages": "Промпт сохранён в кэш для следующих сообщений",
+  "Input tokens": "Входные токены",
+  "Read from cache": "Прочитано из кэша",
+  "Written to cache": "Записано в кэш",
+  "Not cached": "Без кэша",
+  "Output tokens": "Выходные токены",
+  "Reasoning tokens": "Токены рассуждений",
+  "Total tokens": "Всего токенов"
 }

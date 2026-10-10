@@ -3,9 +3,13 @@ import type { CallChatCompletionOptions } from '@shared/models/types'
 import type { ProviderModelInfo } from '@shared/types'
 import type { ModelDependencies } from '@shared/types/adapters'
 import type { SentryScope } from '@shared/utils/sentry_adapter'
-import { generateText } from 'ai'
-import { describe, expect, it, vi } from 'vitest'
-import OpenRouter, { createOpenRouterWebSearchFetch } from './openrouter'
+import { generateText, type ModelMessage } from 'ai'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import OpenRouter, {
+  createOpenRouterCacheControlFetch,
+  createOpenRouterWebSearchFetch,
+  isOpenRouterExplicitCacheModel,
+} from './openrouter'
 
 class TestOpenRouter extends OpenRouter {
   public exposeCallSettings(options: CallChatCompletionOptions = {}) {
@@ -37,15 +41,47 @@ function createDependencies(): ModelDependencies {
   }
 }
 
-function createModel(model: ProviderModelInfo, dependencies = createDependencies()) {
+function createModel(model: ProviderModelInfo, dependencies = createDependencies(), stream?: boolean) {
   return new TestOpenRouter(
     {
       apiKey: 'openrouter-test-key',
       model,
+      stream,
     },
     dependencies
   )
 }
+
+function completionResponse(modelId: string) {
+  return new Response(
+    JSON.stringify({
+      id: 'gen-1',
+      model: modelId,
+      choices: [{ index: 0, message: { role: 'assistant', content: 'ok' }, finish_reason: 'stop' }],
+      usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+    }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } }
+  )
+}
+
+async function captureChatRequest(modelId: string, messages: ModelMessage[]) {
+  const fetch = vi.fn<typeof globalThis.fetch>(() => Promise.resolve(completionResponse(modelId)))
+  vi.stubGlobal('fetch', fetch)
+  const model = createModel({ modelId }, createDependencies(), false)
+  await model.chat(messages, { sessionId: 'session-1' })
+  return JSON.parse(fetch.mock.calls[0][1]?.body as string)
+}
+
+const conversation: ModelMessage[] = [
+  { role: 'system', content: 'You are helpful.' },
+  { role: 'user', content: [{ type: 'text', text: 'first' }] },
+  { role: 'assistant', content: [{ type: 'text', text: 'response' }] },
+  { role: 'user', content: [{ type: 'text', text: 'second' }] },
+]
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 describe('OpenRouter', () => {
   it('exposes OpenRouter server-side web search for chat models', () => {
@@ -116,6 +152,67 @@ describe('OpenRouter', () => {
     })
 
     expect(JSON.parse(fetch.mock.calls[0][1]?.body as string).reasoning).toEqual({ effort: 'low', exclude: false })
+  })
+
+  it('sends the chat session id for sticky provider routing', () => {
+    const model = createModel({ modelId: 'anthropic/claude-opus-5', capabilities: ['reasoning'] })
+
+    expect(model.exposeCallSettings({ sessionId: 'session-1' }).providerOptions).toEqual({
+      openrouter: { session_id: 'session-1' },
+    })
+    expect(
+      model.exposeCallSettings({
+        sessionId: 'session-1',
+        providerOptions: { openrouter: { reasoningEffort: 'low' } },
+      }).providerOptions
+    ).toEqual({ openrouter: { reasoning: { effort: 'low', exclude: false }, session_id: 'session-1' } })
+  })
+
+  it('uses explicit cache breakpoints only for models that need them', () => {
+    expect(isOpenRouterExplicitCacheModel('anthropic/claude-opus-5')).toBe(true)
+    expect(isOpenRouterExplicitCacheModel('~anthropic/claude-sonnet-latest')).toBe(true)
+    expect(isOpenRouterExplicitCacheModel('qwen/qwen3-max')).toBe(true)
+    expect(isOpenRouterExplicitCacheModel('qwen/qwen3.8-27b:free')).toBe(false)
+    expect(isOpenRouterExplicitCacheModel('google/gemini-3.8-flash')).toBe(false)
+    expect(isOpenRouterExplicitCacheModel('openai/gpt-6-astra')).toBe(false)
+  })
+
+  it('sends cache_control breakpoints on content parts for Claude models', async () => {
+    const request = await captureChatRequest('anthropic/claude-opus-5', conversation)
+    const cacheControl = { type: 'ephemeral' }
+
+    expect(request.session_id).toBe('session-1')
+    expect(request.messages).toEqual([
+      { role: 'system', content: [{ type: 'text', text: 'You are helpful.', cache_control: cacheControl }] },
+      { role: 'user', content: [{ type: 'text', text: 'first', cache_control: cacheControl }] },
+      { role: 'assistant', content: 'response' },
+      { role: 'user', content: [{ type: 'text', text: 'second', cache_control: cacheControl }] },
+    ])
+  })
+
+  it('does not add cache_control for models with automatic caching', async () => {
+    const request = await captureChatRequest('google/gemini-3.8-flash', conversation)
+
+    expect(request.session_id).toBe('session-1')
+    expect(JSON.stringify(request.messages)).not.toContain('cache_control')
+    expect(request.messages[0]).toEqual({ role: 'system', content: 'You are helpful.' })
+  })
+
+  it('leaves messages without message-level cache_control untouched', async () => {
+    const baseFetch = vi.fn<typeof globalThis.fetch>(() => Promise.resolve(new Response('{}')))
+    const body = JSON.stringify({
+      messages: [
+        { role: 'system', content: 'You are helpful.' },
+        { role: 'assistant', content: '', cache_control: { type: 'ephemeral' } },
+      ],
+    })
+
+    await createOpenRouterCacheControlFetch(baseFetch)('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      body,
+    })
+
+    expect(baseFetch.mock.calls[0][1]?.body).toBe(body)
   })
 
   it('reads tool use, reasoning and output limits from the OpenRouter model catalog', async () => {

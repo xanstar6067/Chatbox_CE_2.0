@@ -199,6 +199,17 @@ const MessageUsageSchema = z.object({
   The number of cached input tokens.
      */
   cachedInputTokens: z.number().optional().catch(undefined),
+  /**
+  Breakdown of the input tokens by prompt cache usage.
+     */
+  inputTokenDetails: z
+    .object({
+      noCacheTokens: z.number().optional().catch(undefined),
+      cacheReadTokens: z.number().optional().catch(undefined),
+      cacheWriteTokens: z.number().optional().catch(undefined),
+    })
+    .optional()
+    .catch(undefined),
 })
 
 export const MessageSchema = z.object({

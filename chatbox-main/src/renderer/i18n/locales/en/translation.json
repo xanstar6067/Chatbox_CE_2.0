@@ -1126,5 +1126,18 @@
   "Warning tint": "Warning tint",
   "Warning tint (hover)": "Warning tint (hover)",
   "Overlay mask": "Overlay mask",
-  "Lighten mask": "Lighten mask"
+  "Lighten mask": "Lighten mask",
+  "Show prompt cache details": "Show prompt cache details",
+  "Adds a prompt cache breakdown to the token usage tooltip and an info button under replies": "Adds a prompt cache breakdown to the token usage tooltip and an info button under replies",
+  "Token usage": "Token usage",
+  "{{percent}}% from cache": "{{percent}}% from cache",
+  "The provider did not report prompt cache usage": "The provider did not report prompt cache usage",
+  "The prompt was cached for the next messages": "The prompt was cached for the next messages",
+  "Input tokens": "Input tokens",
+  "Read from cache": "Read from cache",
+  "Written to cache": "Written to cache",
+  "Not cached": "Not cached",
+  "Output tokens": "Output tokens",
+  "Reasoning tokens": "Reasoning tokens",
+  "Total tokens": "Total tokens"
 }

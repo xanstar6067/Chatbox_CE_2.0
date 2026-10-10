@@ -339,6 +339,19 @@ export function RouteComponent() {
           />
 
           <Switch
+            pl="xl"
+            label={t('Show prompt cache details')}
+            description={t('Adds a prompt cache breakdown to the token usage tooltip and an info button under replies')}
+            checked={!!settings.showTokenUsed && !!settings.showTokenCacheDetails}
+            disabled={!settings.showTokenUsed}
+            onChange={() =>
+              setSettings({
+                showTokenCacheDetails: !settings.showTokenCacheDetails,
+              })
+            }
+          />
+
+          <Switch
             label={t('show model name')}
             checked={settings.showModelName}
             onChange={() =>

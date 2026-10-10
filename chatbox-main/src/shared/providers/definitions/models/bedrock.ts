@@ -1,8 +1,22 @@
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
+import type { ModelMessage, ToolSet } from 'ai'
 import AbstractAISDKModel, { type CallSettings } from '../../../models/abstract-ai-sdk'
-import type { CallChatCompletionOptions } from '../../../models/types'
-import type { ProviderModelInfo } from '../../../types'
+import { addBedrockCachePoints } from '../../../models/anthropic-cache'
+import type { CallChatCompletionOptions, ChatStreamOptions, ModelStreamPart } from '../../../models/types'
+import type { ProviderModelInfo, StreamTextResult } from '../../../types'
 import type { ModelDependencies } from '../../../types/adapters'
+
+/**
+ * Claude models on Bedrock cache prompts only at explicit cache checkpoints.
+ * Legacy Claude models without prompt caching support are excluded because
+ * Bedrock rejects checkpoints for them.
+ */
+export function isBedrockCacheModel(modelId: string): boolean {
+  return (
+    /anthropic\.|claude/i.test(modelId) &&
+    !/claude-(instant|v2|3-(haiku|sonnet|opus)|3-5-haiku|3-5-sonnet-20240620)/i.test(modelId)
+  )
+}
 
 interface Options {
   accessKey: string
@@ -55,5 +69,20 @@ export default class Bedrock extends AbstractAISDKModel {
       topP: this.options.topP,
       maxOutputTokens: this.options.maxOutputTokens,
     }
+  }
+
+  public async chat(messages: ModelMessage[], options: CallChatCompletionOptions): Promise<StreamTextResult> {
+    return super.chat(this.addCachePoints(messages), options)
+  }
+
+  public async *chatStream<T extends ToolSet>(
+    messages: ModelMessage[],
+    options: ChatStreamOptions
+  ): AsyncGenerator<ModelStreamPart<T>> {
+    yield* super.chatStream<T>(this.addCachePoints(messages), options)
+  }
+
+  private addCachePoints(messages: ModelMessage[]) {
+    return isBedrockCacheModel(this.options.model.modelId) ? addBedrockCachePoints(messages) : messages
   }
 }

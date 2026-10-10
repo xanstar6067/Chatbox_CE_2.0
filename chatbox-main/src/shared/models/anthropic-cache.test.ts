@@ -1,6 +1,6 @@
 import type { ModelMessage } from 'ai'
 import { describe, expect, it } from 'vitest'
-import { addAnthropicCacheControl } from './anthropic-cache'
+import { addAnthropicCacheControl, addBedrockCachePoints, addOpenRouterCacheControl } from './anthropic-cache'
 
 const cacheControl = { type: 'ephemeral' as const }
 
@@ -104,5 +104,36 @@ describe('addAnthropicCacheControl', () => {
     const result = addAnthropicCacheControl(messages)
     // Only 1 breakpoint (last message = only user message)
     expect(hasCacheControl(result[0])).toBe(true)
+  })
+})
+
+describe('provider-specific cache markers', () => {
+  const messages: ModelMessage[] = [
+    { role: 'system', content: 'you are helpful' },
+    { role: 'user', content: [{ type: 'text', text: 'first' }] },
+    { role: 'assistant', content: [{ type: 'text', text: 'response1' }] },
+    { role: 'user', content: [{ type: 'text', text: 'second' }] },
+  ]
+
+  it('marks Bedrock cache points on the same breakpoints', () => {
+    const result = addBedrockCachePoints(messages)
+    const marked = result.map((msg) => msg.providerOptions?.bedrock?.cachePoint)
+
+    expect(marked).toEqual([{ type: 'default' }, { type: 'default' }, undefined, { type: 'default' }])
+    expect(result[0].providerOptions?.anthropic).toBeUndefined()
+  })
+
+  it('marks OpenRouter cache control and keeps other OpenRouter options', () => {
+    const result = addOpenRouterCacheControl([
+      ...messages.slice(0, 3),
+      {
+        role: 'user',
+        content: [{ type: 'text', text: 'second' }],
+        providerOptions: { openrouter: { filename: 'notes.txt' } },
+      },
+    ])
+
+    expect(result[0].providerOptions?.openrouter).toEqual({ cacheControl })
+    expect(result[3].providerOptions?.openrouter).toEqual({ filename: 'notes.txt', cacheControl })
   })
 })
