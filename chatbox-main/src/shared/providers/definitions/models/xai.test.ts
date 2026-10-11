@@ -116,6 +116,54 @@ describe('XAI', () => {
     )
   })
 
+  it('counts reasoning tokens that xAI reports outside completion_tokens', async () => {
+    const dependencies = { ...createDependencies(), recordUsage: vi.fn() }
+    const events = [
+      {
+        id: 'xai-stream-2',
+        model: 'grok-4.6',
+        choices: [{ index: 0, delta: { content: 'ok' }, finish_reason: 'stop' }],
+      },
+      {
+        id: 'xai-stream-2',
+        model: 'grok-4.6',
+        choices: [],
+        usage: {
+          prompt_tokens: 663,
+          completion_tokens: 50,
+          total_tokens: 837,
+          completion_tokens_details: { reasoning_tokens: 124 },
+        },
+      },
+    ]
+    apiRequest.mockResolvedValue(
+      new Response(`${events.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`).join('')}data: [DONE]\n\n`, {
+        headers: { 'Content-Type': 'text/event-stream' },
+      })
+    )
+    const model = new XAI(
+      { apiKey: 'xai-test-key', apiHost: 'https://api.x.ai', model: { modelId: 'grok-4.6' }, stream: true },
+      dependencies
+    )
+
+    const chunks = []
+    for await (const chunk of model.chatStream([{ role: 'user', content: 'test' }], { usagePurpose: 'chat' })) {
+      chunks.push(chunk)
+    }
+
+    expect(chunks.find((chunk) => chunk.type === 'finish')).toMatchObject({
+      totalUsage: {
+        inputTokens: 663,
+        outputTokens: 174,
+        totalTokens: 837,
+        outputTokenDetails: { textTokens: 50, reasoningTokens: 124 },
+      },
+    })
+    expect(dependencies.recordUsage).toHaveBeenCalledWith(
+      expect.objectContaining({ outputTokens: 174, totalTokens: 837, reasoningTokens: 124 })
+    )
+  })
+
   it('routes every Grok 4.20 Multi-Agent alias through Responses-compatible settings', () => {
     expect(isXaiMultiAgentModel('grok-4.20-multi-agent')).toBe(true)
     expect(isXaiMultiAgentModel('grok-4.20-multi-agent-experimental-beta-0304')).toBe(true)

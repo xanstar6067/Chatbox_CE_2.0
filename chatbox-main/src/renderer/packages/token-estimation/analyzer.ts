@@ -8,9 +8,10 @@
 import type { Message, MessageFile, MessageLink } from '@shared/types/session'
 import { getMessageText } from '@shared/utils/message'
 import { MAX_INLINE_FILE_LINES } from '@/packages/context-management/attachment-payload'
+import { type ContextUsageAnchor, getFinalStepParts } from '@/packages/context-management/context-usage'
 import { getTokenCacheKey, isAttachmentCacheValid, isMessageTextCacheValid } from './cache-keys'
 import { getPriority } from './computation-queue'
-import { estimateTokens } from './tokenizer'
+import { countsReasoningTokens, estimateTokens } from './tokenizer'
 import type { ComputationTask, ContentMode, TokenBreakdown, TokenizerType } from './types'
 
 // ============================================================================
@@ -29,6 +30,11 @@ export interface AnalyzeTokenRequirementsOptions {
   tokenizerType: TokenizerType
   /** Whether the model supports tool use for files (affects preview mode) */
   modelSupportToolUseForFile: boolean
+  /**
+   * Reply whose provider-reported prompt size replaces the local estimate of itself and every earlier
+   * context message (see findContextUsageAnchor).
+   */
+  anchor?: ContextUsageAnchor
 }
 
 /**
@@ -41,6 +47,8 @@ export interface AnalysisResult {
   contextTokens: number
   /** Tasks that need computation (without sessionId - caller must add it) */
   pendingTasks: Omit<ComputationTask, 'id' | 'createdAt' | 'sessionId'>[]
+  /** Whether contextTokens starts from the anchor's provider-reported prompt size */
+  usesProviderCount: boolean
   /** Detailed breakdown of token sources */
   breakdown: {
     currentInput: TokenBreakdown
@@ -86,7 +94,7 @@ interface MessageAttachmentsAnalysisResult {
  * @returns Analysis result with known tokens and pending tasks
  */
 export function analyzeTokenRequirements(options: AnalyzeTokenRequirementsOptions): AnalysisResult {
-  const { constructedMessage, contextMessages, tokenizerType, modelSupportToolUseForFile } = options
+  const { constructedMessage, contextMessages, tokenizerType, modelSupportToolUseForFile, anchor } = options
 
   const pendingTasks: Omit<ComputationTask, 'id' | 'createdAt' | 'sessionId'>[] = []
   let currentInputText = 0
@@ -116,8 +124,13 @@ export function analyzeTokenRequirements(options: AnalyzeTokenRequirementsOption
   // Analyze context messages (reverse order so newest messages have higher priority)
   // contextMessages is ordered oldest to newest, but we want newest first for calculation
   const contextLength = contextMessages.length
-  for (let index = 0; index < contextLength; index++) {
+  const anchorIndex = anchor ? contextMessages.findIndex((m) => m.id === anchor.messageId) : -1
+  for (let index = Math.max(anchorIndex, 0); index < contextLength; index++) {
     const msg = contextMessages[index]
+    if (index === anchorIndex && anchor) {
+      contextText += getAnchorTokens(msg, anchor, tokenizerType)
+      continue
+    }
     // Reverse priority: newest message (last in array) gets priority 0
     const priorityIndex = contextLength - 1 - index
 
@@ -142,6 +155,7 @@ export function analyzeTokenRequirements(options: AnalyzeTokenRequirementsOption
     currentInputTokens: currentInputText + currentInputAttachments,
     contextTokens: contextText + contextAttachments,
     pendingTasks,
+    usesProviderCount: anchorIndex !== -1,
     breakdown: {
       currentInput: { text: currentInputText, attachments: currentInputAttachments },
       context: { text: contextText, attachments: contextAttachments },
@@ -180,7 +194,9 @@ function analyzeMessageText(
   // For context messages, check cache first
   const cachedValue = message.tokenCountMap?.[tokenizerType]
   const calculatedAt = message.tokenCalculatedAt?.[tokenizerType]
-  const cacheValid = isMessageTextCacheValid(cachedValue, calculatedAt, message.updatedAt)
+  const cacheValid =
+    isMessageTextCacheValid(cachedValue, calculatedAt, message.updatedAt) &&
+    !countedStaleReasoning(message, tokenizerType, calculatedAt)
 
   if (cacheValid) {
     return { tokens: cachedValue ?? 0, needsCalculation: false }
@@ -196,6 +212,34 @@ function analyzeMessageText(
       priority: getPriority(isCurrentInput, 'message-text', messageIndex),
     },
   }
+}
+
+/**
+ * Message text counts cached before this moment included reasoning even where it is not sent to the model.
+ * Such counts are recalculated for messages that contain reasoning.
+ */
+const REASONING_EXCLUDED_SINCE = Date.UTC(2026, 9, 11, 18, 30)
+
+function countedStaleReasoning(message: Message, tokenizerType: TokenizerType, calculatedAt: number | undefined) {
+  return (
+    !countsReasoningTokens(tokenizerType) &&
+    (calculatedAt ?? 0) < REASONING_EXCLUDED_SINCE &&
+    message.contentParts.some((part) => part.type === 'reasoning' && part.text)
+  )
+}
+
+/**
+ * The anchor's prompt size covers every earlier context message; only its own final reply is added,
+ * taken from the provider when it reported the count, otherwise estimated locally.
+ */
+function getAnchorTokens(message: Message, anchor: ContextUsageAnchor, tokenizerType: TokenizerType): number {
+  const { inputTokens, resentOutputTokens } = anchor.contextUsage
+  if (resentOutputTokens !== undefined) {
+    return inputTokens + resentOutputTokens
+  }
+  const finalReply = { ...message, contentParts: getFinalStepParts(message.contentParts) }
+  const text = getMessageText(finalReply, true, countsReasoningTokens(tokenizerType))
+  return inputTokens + estimateTokens(text, getTokenModel(tokenizerType))
 }
 
 function getTokenModel(tokenizerType: TokenizerType): { provider: string; modelId: string } | undefined {

@@ -212,6 +212,16 @@ const MessageUsageSchema = z.object({
     .catch(undefined),
 })
 
+const MessageContextUsageSchema = z.object({
+  provider: z.string(),
+  modelId: z.string(),
+  /** Input tokens of the final request step: the whole prompt the model saw, as counted by its own tokenizer. */
+  inputTokens: z.number(),
+  /** Output tokens of the final step that are sent back on the next turn (reasoning excluded unless it is resent). */
+  resentOutputTokens: z.number().optional(),
+  createdAt: z.number(),
+})
+
 export const MessageSchema = z.object({
   id: z.string(),
   role: z.nativeEnum(MessageRoleEnum),
@@ -234,6 +244,9 @@ export const MessageSchema = z.object({
   tokenCount: z.number().optional(), // output token count
   tokensUsed: z.number().optional(), // deprecated, use `usage` instead
   usage: MessageUsageSchema.optional().catch(undefined),
+  // Provider-reported size of the final API request that produced this message. `usage` sums every
+  // tool-call step, so it cannot say how large the conversation was; this anchors the context estimate.
+  contextUsage: MessageContextUsageSchema.optional().catch(undefined),
   timestamp: z.number().optional(),
   firstTokenLatency: z.number().optional(),
   finishReason: z.string().optional(),

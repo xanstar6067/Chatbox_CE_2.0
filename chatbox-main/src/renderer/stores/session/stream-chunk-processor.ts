@@ -7,7 +7,7 @@ import type {
   MessageTextPart,
   MessageToolCallPart,
 } from '@shared/types'
-import type { ToolSet } from 'ai'
+import type { LanguageModelUsage, ToolSet } from 'ai'
 
 export interface StreamProcessorCallbacks {
   onFileReceived: (mediaType: string, base64: string) => Promise<string>
@@ -18,6 +18,8 @@ export interface StreamProcessorState {
   currentTextPart: MessageTextPart | undefined
   currentReasoningPart: MessageReasoningPart | undefined
   usage: Message['usage']
+  /** Usage of the latest finished request step; `usage` is the sum over all tool-call steps. */
+  lastStepUsage: LanguageModelUsage | undefined
   finishReason: string | undefined
   nativeWebSearchProvider: string | undefined
 }
@@ -31,6 +33,7 @@ export function createInitialState(
     currentTextPart: undefined,
     currentReasoningPart: undefined,
     usage: undefined,
+    lastStepUsage: undefined,
     finishReason: undefined,
     nativeWebSearchProvider,
   }
@@ -168,7 +171,7 @@ export async function processStreamChunk(
   callbacks: StreamProcessorCallbacks
 ): Promise<{ state: StreamProcessorState; skipUpdate: boolean; statusChunk?: ModelStreamPart<ToolSet> }> {
   const { contentParts, nativeWebSearchProvider } = state
-  let { currentTextPart, currentReasoningPart, usage, finishReason } = state
+  let { currentTextPart, currentReasoningPart, usage, lastStepUsage, finishReason } = state
 
   switch (chunk.type) {
     case 'text-delta': {
@@ -286,12 +289,17 @@ export async function processStreamChunk(
           currentTextPart,
           currentReasoningPart,
           usage,
+          lastStepUsage,
           finishReason,
           nativeWebSearchProvider,
         },
         skipUpdate: true,
         statusChunk: chunk,
       }
+    }
+    case 'finish-step': {
+      lastStepUsage = chunk.usage
+      break
     }
     case 'finish': {
       finishReason = 'finishReason' in chunk ? chunk.finishReason : finishReason
@@ -324,6 +332,7 @@ export async function processStreamChunk(
       currentTextPart,
       currentReasoningPart,
       usage,
+      lastStepUsage,
       finishReason,
       nativeWebSearchProvider,
     },

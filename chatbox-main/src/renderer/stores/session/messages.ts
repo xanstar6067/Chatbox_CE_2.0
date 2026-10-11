@@ -117,6 +117,10 @@ export async function modifyMessage(
     updated.wordCount = countMessageWords(updated)
     updated.tokenCount = estimateTokensFromMessages([updated])
     updated.tokenCountMap = undefined
+    if (updated.contextUsage) {
+      // The content may have been edited, so the provider count of this reply no longer applies.
+      updated.contextUsage = { ...updated.contextUsage, resentOutputTokens: undefined }
+    }
   }
 
   // 更新消息时间戳

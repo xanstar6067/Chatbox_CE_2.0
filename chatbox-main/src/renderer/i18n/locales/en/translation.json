@@ -214,6 +214,7 @@
   "Content not allowed. Please modify your request and try again.": "Content not allowed. Please modify your request and try again.",
   "Context": "Context",
   "Context Management": "Context Management",
+  "Context counted by the provider for the last reply": "Context counted by the provider for the last reply",
   "Context messages": "Context messages",
   "Context Priority: Preserves more context, uses more tokens": "Context Priority: Preserves more context, uses more tokens",
   "Context Window": "Context Window",

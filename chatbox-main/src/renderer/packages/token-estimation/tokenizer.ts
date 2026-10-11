@@ -64,6 +64,14 @@ export function getTokenizerType(model?: TokenModel): TokenizerType {
   return isDeepSeekModel(model) ? 'deepseek' : 'default'
 }
 
+/**
+ * Whether reasoning content counts toward a message's tokens. Reasoning is sent back to the model only for
+ * DeepSeek thinking mode; every other provider gets the history without it.
+ */
+export function countsReasoningTokens(tokenizerType: TokenizerType): boolean {
+  return tokenizerType === 'deepseek'
+}
+
 // ============================================================================
 // DeepSeek Tokenizer
 // ============================================================================

@@ -214,6 +214,7 @@
   "Content not allowed. Please modify your request and try again.": "Содержимое не разрешено. Пожалуйста, измените запрос и повторите попытку.",
   "Context": "Контекст",
   "Context Management": "Управление контекстом",
+  "Context counted by the provider for the last reply": "Контекст посчитан провайдером для последнего ответа",
   "Context messages": "Контекстные сообщения",
   "Context Priority: Preserves more context, uses more tokens": "Приоритет контекста: сохраняет больше контекста, использует больше токенов",
   "Context Window": "Окно контекста",

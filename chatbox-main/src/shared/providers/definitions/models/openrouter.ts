@@ -10,6 +10,7 @@ import type {
   ModelStreamPart,
   NativeWebSearchConfig,
 } from '../../../models/types'
+import { separateReasoningUsageMiddleware } from '../../../models/usage-normalization'
 import { apiErrorMessage, responseToVideoDataUrl } from '../../../models/video'
 import type { ProviderModelInfo, StreamTextResult, VideoGenerationInput, VideoGenerationJob } from '../../../types'
 import type { ModelDependencies } from '../../../types/adapters'
@@ -210,7 +211,8 @@ export default class OpenRouter extends AbstractAISDKModel {
     const provider = this.getProvider(options)
     return wrapLanguageModel({
       model: provider.languageModel(this.options.model.modelId),
-      middleware: extractReasoningMiddleware({ tagName: 'think' }),
+      // Upstream providers such as xAI can pass through completion counts that exclude reasoning.
+      middleware: [extractReasoningMiddleware({ tagName: 'think' }), separateReasoningUsageMiddleware],
     })
   }
 

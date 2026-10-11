@@ -5,6 +5,7 @@ import { useTokenEstimation } from '@/packages/token-estimation/hooks/useTokenEs
 import queryClient from '@/stores/queryClient'
 import { selectMessagesForSendContext } from './attachment-payload'
 import { buildContextForSession } from './context-builder'
+import { findContextUsageAnchor } from './context-usage'
 
 // Set React Query defaults for context tokens cache
 queryClient.setQueryDefaults(['context-tokens'], {
@@ -34,6 +35,8 @@ export interface UseContextTokensResult {
   totalTokens: number
   isCalculating: boolean
   pendingTasks: number
+  /** Whether contextTokens starts from the provider-reported prompt size of the latest reply */
+  usesProviderCount: boolean
 }
 
 /**
@@ -46,6 +49,8 @@ export interface ContextTokensCacheKeyParams {
   latestContextMessageId: string | null
   latestCompactionBoundaryId: string | null
   tokenizerType: 'default' | 'deepseek'
+  /** Reply whose provider-reported prompt size the count starts from (it depends on the selected model) */
+  anchorMessageId?: string | null
 }
 
 /**
@@ -122,6 +127,7 @@ export function getContextTokensCacheKey(params: ContextTokensCacheKeyParams): r
     params.latestContextMessageId,
     params.latestCompactionBoundaryId,
     params.tokenizerType,
+    params.anchorMessageId ?? null,
   ] as const
 }
 
@@ -170,6 +176,17 @@ export function useContextTokens(options: UseContextTokensOptions): UseContextTo
   // 2. tokenizerType must be stable
   const tokenizerType = useMemo(() => getTokenizerType(model), [model?.provider, model?.modelId])
 
+  // Provider-reported prompt size of the latest reply of this model, when it still describes the context
+  const anchor = useMemo(() => {
+    if (!session || !model) return undefined
+    return findContextUsageAnchor({
+      contextMessages,
+      sessionMessages: session.messages,
+      model,
+      maxContextMessageCount: settings.maxContextMessageCount,
+    })
+  }, [contextMessages, session?.messages, model?.provider, model?.modelId, settings.maxContextMessageCount])
+
   // 3. cacheKey must be stable (NO modelSupportToolUseForFile!)
   const cacheKey = useMemo(() => {
     if (!sessionId || sessionId === 'new' || !session) return null
@@ -179,8 +196,9 @@ export function useContextTokens(options: UseContextTokensOptions): UseContextTo
       latestContextMessageId: contextMessages[contextMessages.length - 1]?.id ?? null,
       latestCompactionBoundaryId: getLatestCompactionBoundaryId(session.compactionPoints),
       tokenizerType,
+      anchorMessageId: anchor?.messageId ?? null,
     })
-  }, [sessionId, session?.compactionPoints, settings.maxContextMessageCount, contextMessages, tokenizerType])
+  }, [sessionId, session?.compactionPoints, settings.maxContextMessageCount, contextMessages, tokenizerType, anchor])
 
   // 4. Call useTokenEstimation
   const tokenResult = useTokenEstimation({
@@ -189,6 +207,7 @@ export function useContextTokens(options: UseContextTokensOptions): UseContextTo
     contextMessages,
     model,
     modelSupportToolUseForFile,
+    anchor,
   })
 
   const isCalculating = tokenResult.isCalculating
@@ -223,5 +242,6 @@ export function useContextTokens(options: UseContextTokensOptions): UseContextTo
     totalTokens: tokenResult.totalTokens,
     isCalculating: tokenResult.isCalculating,
     pendingTasks: tokenResult.pendingTasks,
+    usesProviderCount: tokenResult.usesProviderCount,
   }
 }

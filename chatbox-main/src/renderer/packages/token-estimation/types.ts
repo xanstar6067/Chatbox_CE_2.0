@@ -158,6 +158,8 @@ export interface TokenEstimationResult {
   isCalculating: boolean
   /** Number of pending computation tasks */
   pendingTasks: number
+  /** Whether the context count starts from the provider-reported prompt size of an earlier reply */
+  usesProviderCount: boolean
   /** Detailed breakdown of token sources */
   breakdown: {
     /** Breakdown for current input */

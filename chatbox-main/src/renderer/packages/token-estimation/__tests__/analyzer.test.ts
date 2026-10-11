@@ -651,3 +651,81 @@ describe('analyzeTokenRequirements', () => {
     })
   })
 })
+
+describe('analyzeTokenRequirements reasoning and provider counts', () => {
+  const reasoningReply = (overrides: Partial<Message> = {}) =>
+    createMessage({
+      id: 'assistant-1',
+      role: 'assistant',
+      contentParts: [
+        { type: 'reasoning', text: 'Long hidden chain of thought' },
+        { type: 'text', text: 'Hello world' },
+      ],
+      ...overrides,
+    })
+
+  it('recalculates cached counts that included reasoning the model never receives', () => {
+    const result = analyzeTokenRequirements({
+      constructedMessage: undefined,
+      contextMessages: [
+        reasoningReply({ tokenCountMap: { default: 500 }, tokenCalculatedAt: { default: Date.UTC(2026, 9, 1) } }),
+      ],
+      tokenizerType: 'default',
+      modelSupportToolUseForFile: false,
+    })
+
+    expect(result.contextTokens).toBe(0)
+    expect(result.pendingTasks).toHaveLength(1)
+  })
+
+  it('keeps counts calculated after reasoning was excluded', () => {
+    const result = analyzeTokenRequirements({
+      constructedMessage: undefined,
+      contextMessages: [reasoningReply({ tokenCountMap: { default: 2 }, tokenCalculatedAt: { default: Date.now() } })],
+      tokenizerType: 'default',
+      modelSupportToolUseForFile: false,
+    })
+
+    expect(result.contextTokens).toBe(2)
+    expect(result.pendingTasks).toHaveLength(0)
+  })
+
+  it('starts from the provider prompt size and estimates only later messages', () => {
+    const contextUsage = {
+      provider: 'gemini',
+      modelId: 'gemini-3-pro',
+      inputTokens: 17000,
+      resentOutputTokens: 300,
+      createdAt: 2000,
+    }
+    const result = analyzeTokenRequirements({
+      constructedMessage: undefined,
+      contextMessages: [
+        createMessage({ id: 'old-user', tokenCountMap: { default: 99999 }, tokenCalculatedAt: { default: 1 } }),
+        reasoningReply({ contextUsage }),
+        createMessage({ id: 'new-user', tokenCountMap: { default: 7 }, tokenCalculatedAt: { default: 3000 } }),
+      ],
+      tokenizerType: 'default',
+      modelSupportToolUseForFile: false,
+      anchor: { messageId: 'assistant-1', contextUsage },
+    })
+
+    expect(result.usesProviderCount).toBe(true)
+    expect(result.contextTokens).toBe(17000 + 300 + 7)
+    expect(result.pendingTasks).toHaveLength(0)
+  })
+
+  it('estimates the final reply locally when the provider did not separate it from reasoning', () => {
+    const contextUsage = { provider: 'claude', modelId: 'claude-opus', inputTokens: 1000, createdAt: 2000 }
+    const result = analyzeTokenRequirements({
+      constructedMessage: undefined,
+      contextMessages: [reasoningReply({ contextUsage })],
+      tokenizerType: 'default',
+      modelSupportToolUseForFile: false,
+      anchor: { messageId: 'assistant-1', contextUsage },
+    })
+
+    // 'Hello world' = 2 tokens; the reasoning text is not sent back
+    expect(result.contextTokens).toBe(1002)
+  })
+})

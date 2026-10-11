@@ -129,6 +129,7 @@ describe('context-tokens hook tests', () => {
       totalTokens: 100,
       isCalculating: true,
       pendingTasks: 5,
+      usesProviderCount: false,
       breakdown: { currentInput: { text: 0, attachments: 0 }, context: { text: 100, attachments: 0 } },
     })
 

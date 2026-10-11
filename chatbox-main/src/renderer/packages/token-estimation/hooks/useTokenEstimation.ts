@@ -1,5 +1,6 @@
 import type { Message } from '@shared/types/session'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type { ContextUsageAnchor } from '@/packages/context-management/context-usage'
 import { analyzeTokenRequirements } from '../analyzer'
 import { computationQueue, generateTaskId } from '../computation-queue'
 import { getTokenizerType } from '../tokenizer'
@@ -11,10 +12,11 @@ export interface UseTokenEstimationOptions {
   contextMessages: Message[]
   model?: { provider: string; modelId: string }
   modelSupportToolUseForFile: boolean
+  anchor?: ContextUsageAnchor
 }
 
 export function useTokenEstimation(options: UseTokenEstimationOptions): TokenEstimationResult {
-  const { sessionId, constructedMessage, contextMessages, model, modelSupportToolUseForFile } = options
+  const { sessionId, constructedMessage, contextMessages, model, modelSupportToolUseForFile, anchor } = options
 
   const tokenizerType = useMemo(() => getTokenizerType(model), [model])
 
@@ -40,8 +42,9 @@ export function useTokenEstimation(options: UseTokenEstimationOptions): TokenEst
         contextMessages,
         tokenizerType,
         modelSupportToolUseForFile,
+        anchor,
       }),
-    [constructedMessage, contextMessages, tokenizerType, modelSupportToolUseForFile]
+    [constructedMessage, contextMessages, tokenizerType, modelSupportToolUseForFile, anchor]
   )
 
   const contextMessageIds = useMemo(() => new Set(contextMessages.map((m) => m.id)), [contextMessages])
@@ -99,6 +102,7 @@ export function useTokenEstimation(options: UseTokenEstimationOptions): TokenEst
     totalTokens: analysisResult.currentInputTokens + analysisResult.contextTokens,
     isCalculating: queueStatus.pending > 0 || queueStatus.running > 0 || analysisResult.pendingTasks.length > 0,
     pendingTasks: queueStatus.pending + queueStatus.running,
+    usesProviderCount: analysisResult.usesProviderCount,
     breakdown: analysisResult.breakdown,
   }
 }

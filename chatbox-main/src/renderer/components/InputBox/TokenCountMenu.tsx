@@ -14,6 +14,7 @@ type Props = {
   isCalculating?: boolean
   pendingTasks?: number
   totalContextMessages?: number
+  usesProviderCount?: boolean
   contextWindow?: number
   currentMessageCount?: number
   maxContextMessageCount?: number
@@ -29,6 +30,7 @@ const TokenCountMenu: FC<Props> = ({
   isCalculating = false,
   pendingTasks,
   totalContextMessages,
+  usesProviderCount = false,
   contextWindow,
   currentMessageCount,
   maxContextMessageCount,
@@ -71,6 +73,11 @@ const TokenCountMenu: FC<Props> = ({
             {t('Estimated Token Usage')}
           </Text>
         </Flex>
+        {usesProviderCount && (
+          <Text size="xs" c="dimmed" px="xs" pb="4">
+            {t('Context counted by the provider for the last reply')}
+          </Text>
+        )}
 
         <Menu.Item disabled style={{ cursor: 'default' }}>
           <Flex justify="space-between" align="center" gap="xs">

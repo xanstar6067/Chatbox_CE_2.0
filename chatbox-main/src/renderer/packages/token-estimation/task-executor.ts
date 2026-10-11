@@ -10,7 +10,7 @@ import storage from '@/storage'
 import * as chatStore from '@/stores/chatStore'
 import { getTaskSession } from '@/stores/taskSessionStore'
 import { computationQueue } from './computation-queue'
-import { estimateTokens } from './tokenizer'
+import { countsReasoningTokens, estimateTokens } from './tokenizer'
 import type { ComputationTask, TaskResult, TokenizerType } from './types'
 
 const log = getLogger('token-estimation:executor')
@@ -61,7 +61,7 @@ async function executeMessageTextTask(task: ComputationTask): Promise<TaskResult
     return { success: false, error: 'message_not_found', silent: true }
   }
 
-  const text = getMessageText(message, true, true)
+  const text = getMessageText(message, true, countsReasoningTokens(tokenizerType))
   const tokens = estimateTokens(text, getTokenModel(tokenizerType))
 
   log.debug('Message text task completed', { taskId: task.id, tokens })

@@ -539,15 +539,22 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
       hasSessionRetrievalFiles && isModelToolCapabilityFetched && !modelSupportToolUseForFile
 
     // Calculate token counts using unified cache layer
-    const { contextTokens, currentInputTokens, totalTokens, isCalculating, pendingTasks, messageCount } =
-      useContextTokens({
-        sessionId: currentSessionId || null,
-        session: currentSession,
-        settings: currentSessionMergedSettings || {},
-        model,
-        modelSupportToolUseForFile,
-        constructedMessage: preConstructedMessage.message,
-      })
+    const {
+      contextTokens,
+      currentInputTokens,
+      totalTokens,
+      isCalculating,
+      pendingTasks,
+      messageCount,
+      usesProviderCount,
+    } = useContextTokens({
+      sessionId: currentSessionId || null,
+      session: currentSession,
+      settings: currentSessionMergedSettings || {},
+      model,
+      modelSupportToolUseForFile,
+      constructedMessage: preConstructedMessage.message,
+    })
 
     const compactionUIStateMap = useAtomValue(compactionUIStateMapAtom)
     const isCompactionRunning = useMemo(() => {
@@ -1674,6 +1681,7 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
                   isCalculating={isCalculating}
                   pendingTasks={pendingTasks}
                   totalContextMessages={messageCount}
+                  usesProviderCount={usesProviderCount}
                   contextWindow={effectiveContextWindow ?? undefined}
                   currentMessageCount={currentContextMessageIds?.length ?? 0}
                   maxContextMessageCount={currentSessionMergedSettings?.maxContextMessageCount}

@@ -8,6 +8,7 @@ import { t } from 'i18next'
 import { createModel, createModelDependencies } from '@/adapters'
 import { getLogger } from '@/lib/utils'
 import * as appleAppStore from '@/packages/apple_app_store'
+import { buildMessageContextUsage } from '@/packages/context-management/context-usage'
 import { convertToModelMessages, injectModelSystemPrompt } from '@/packages/model-calls/message-utils'
 import { estimateTokensFromMessages } from '@/packages/token'
 import platform from '@/platform'
@@ -192,9 +193,10 @@ export async function orchestrateGeneration(
 
     injectedMessages = sequenceMessages(injectedMessages)
 
+    const preserveReasoning = settings.provider === ModelProviderEnum.DeepSeek
     const coreMessages = await convertToModelMessages(injectedMessages, {
       modelSupportVision: model.isSupportVision(),
-      preserveReasoning: settings.provider === ModelProviderEnum.DeepSeek,
+      preserveReasoning,
     })
 
     targetMsg = {
@@ -287,6 +289,13 @@ export async function orchestrateGeneration(
       status: [],
       finishReason: processorState.finishReason,
       usage: processorState.usage,
+      contextUsage: buildMessageContextUsage({
+        lastStepUsage: processorState.lastStepUsage,
+        provider: settings.provider,
+        modelId: settings.modelId,
+        contentParts: processorState.contentParts,
+        preserveReasoning,
+      }),
     }
 
     await persistStreamingMessage(sessionId, targetMsg, { refreshCounting: true })

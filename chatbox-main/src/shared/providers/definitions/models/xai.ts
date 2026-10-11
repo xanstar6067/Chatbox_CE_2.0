@@ -5,6 +5,7 @@ import type { CallSettings } from '../../../models/abstract-ai-sdk'
 import { ApiError } from '../../../models/errors'
 import OpenAICompatible, { type OpenAICompatibleSettings } from '../../../models/openai-compatible'
 import type { CallChatCompletionOptions, NativeWebSearchConfig } from '../../../models/types'
+import { separateReasoningUsageMiddleware } from '../../../models/usage-normalization'
 import { createFetchWithProxy } from '../../../models/utils/fetch-proxy'
 import { responseToVideoDataUrl } from '../../../models/video'
 import type { VideoGenerationInput, VideoGenerationJob } from '../../../types'
@@ -138,12 +139,12 @@ export default class XAI extends OpenAICompatible {
 
   protected getChatModel(options: CallChatCompletionOptions = {}) {
     if (!this.usesResponsesAPI(options)) {
-      return super.getChatModel()
+      return wrapLanguageModel({ model: super.getChatModel(), middleware: separateReasoningUsageMiddleware })
     }
 
     return wrapLanguageModel({
       model: this.getResponsesProvider().responses(this.options.model.modelId),
-      middleware: extractReasoningMiddleware({ tagName: 'think' }),
+      middleware: [extractReasoningMiddleware({ tagName: 'think' }), separateReasoningUsageMiddleware],
     })
   }
 
