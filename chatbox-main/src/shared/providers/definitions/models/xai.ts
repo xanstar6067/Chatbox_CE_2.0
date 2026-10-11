@@ -67,6 +67,7 @@ export default class XAI extends OpenAICompatible {
       name: 'xai',
       apiKey: this.options.apiKey,
       baseURL: this.options.apiHost,
+      includeUsage: true,
       fetch: createFetchWithProxy(this.options.useProxy, this.dependencies),
     })
   }

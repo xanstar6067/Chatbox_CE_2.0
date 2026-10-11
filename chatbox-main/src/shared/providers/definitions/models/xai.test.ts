@@ -57,6 +57,65 @@ describe('XAI', () => {
     apiRequest.mockReset()
   })
 
+  it.each([0, 800])('preserves %i cached tokens from the final streaming usage chunk', async (cachedTokens) => {
+    const dependencies = { ...createDependencies(), recordUsage: vi.fn() }
+    apiRequest.mockImplementation(({ body }) => {
+      const request = JSON.parse(body as string)
+      const chunks = [
+        {
+          id: 'xai-stream-1',
+          model: 'grok-4.20-0309-non-reasoning',
+          choices: [{ index: 0, delta: { content: 'ok' }, finish_reason: 'stop' }],
+        },
+      ]
+      const usageChunk = {
+        id: 'xai-stream-1',
+        model: 'grok-4.20-0309-non-reasoning',
+        choices: [],
+        usage: {
+          prompt_tokens: 1000,
+          completion_tokens: 10,
+          total_tokens: 1010,
+          prompt_tokens_details: { cached_tokens: cachedTokens },
+        },
+      }
+      const events = request.stream_options?.include_usage ? [...chunks, usageChunk] : chunks
+      return Promise.resolve(
+        new Response(`${events.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`).join('')}data: [DONE]\n\n`, {
+          headers: { 'Content-Type': 'text/event-stream' },
+        })
+      )
+    })
+    const model = new XAI(
+      {
+        apiKey: 'xai-test-key',
+        apiHost: 'https://api.x.ai',
+        model: { modelId: 'grok-4.20-0309-non-reasoning' },
+        stream: true,
+      },
+      dependencies
+    )
+
+    const chunks = []
+    for await (const chunk of model.chatStream([{ role: 'user', content: 'test' }], { usagePurpose: 'chat' })) {
+      chunks.push(chunk)
+    }
+
+    expect(JSON.parse(apiRequest.mock.calls[0][0].body).stream_options).toEqual({ include_usage: true })
+    expect(chunks.find((chunk) => chunk.type === 'finish')).toMatchObject({
+      totalUsage: {
+        inputTokens: 1000,
+        outputTokens: 10,
+        totalTokens: 1010,
+        inputTokenDetails: { cacheReadTokens: cachedTokens, noCacheTokens: 1000 - cachedTokens },
+      },
+    })
+    expect(dependencies.recordUsage).toHaveBeenCalledTimes(1)
+    expect(dependencies.recordUsage).toHaveBeenCalledWith(
+      expect.objectContaining({ inputTokens: 1000, cacheReadTokens: cachedTokens })
+    )
+  })
+
   it('routes every Grok 4.20 Multi-Agent alias through Responses-compatible settings', () => {
     expect(isXaiMultiAgentModel('grok-4.20-multi-agent')).toBe(true)
     expect(isXaiMultiAgentModel('grok-4.20-multi-agent-experimental-beta-0304')).toBe(true)
