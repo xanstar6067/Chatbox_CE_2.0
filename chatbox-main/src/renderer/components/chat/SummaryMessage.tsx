@@ -2,10 +2,11 @@ import NiceModal from '@ebay/nice-modal-react'
 import { ActionIcon, Button, Collapse, Flex, Group, Stack, Text, Tooltip } from '@mantine/core'
 import type { Message } from '@shared/types'
 import { getMessageText } from '@shared/utils/message'
-import { IconChevronDown, IconChevronUp, IconPencil, IconTrash } from '@tabler/icons-react'
+import { IconCheck, IconChevronDown, IconChevronUp, IconCopy, IconPencil, IconTrash } from '@tabler/icons-react'
 import { type FC, memo, useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Markdown from '@/components/Markdown'
+import { useCopied } from '@/hooks/useCopied'
 import { cn } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { ScalableIcon } from '../common/ScalableIcon'
@@ -26,6 +27,7 @@ const SummaryMessage: FC<SummaryMessageProps> = ({ msg, className, isLatestSumma
   const { enableMarkdownRendering, enableLaTeXRendering, enableMermaidRendering } = useSettingsStore((state) => state)
 
   const summaryText = getMessageText(msg)
+  const { copied, copy } = useCopied(summaryText)
 
   const handleConfirmDelete = () => {
     setShowDeleteConfirm(false)
@@ -76,25 +78,30 @@ const SummaryMessage: FC<SummaryMessageProps> = ({ msg, className, isLatestSumma
             </Text>
           )}
 
-          {isLatestSummary && (
-            <Flex gap={0} mt="xs" className="opacity-0 group-hover/summary:opacity-100 transition-opacity">
-              <Tooltip label={t('Edit')} openDelay={1000} withArrow>
-                <ActionIcon
-                  variant="subtle"
-                  w="auto"
-                  h="auto"
-                  miw="auto"
-                  mih="auto"
-                  p={4}
-                  bd={0}
-                  color="chatbox-secondary"
-                  onClick={handleEdit}
-                >
-                  <ScalableIcon icon={IconPencil} size={16} />
-                </ActionIcon>
-              </Tooltip>
-              {onDelete && (
-                <Tooltip label={t('Delete')} openDelay={1000} withArrow>
+          <Flex
+            gap={0}
+            mt="xs"
+            className="opacity-0 group-hover/summary:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity"
+          >
+            <Tooltip label={copied ? t('Copied') : t('Copy')} openDelay={1000} withArrow>
+              <ActionIcon
+                variant="subtle"
+                w="auto"
+                h="auto"
+                miw="auto"
+                mih="auto"
+                p={4}
+                bd={0}
+                color="chatbox-secondary"
+                aria-label={copied ? t('Copied') : t('Copy')}
+                onClick={copy}
+              >
+                <ScalableIcon icon={copied ? IconCheck : IconCopy} size={16} />
+              </ActionIcon>
+            </Tooltip>
+            {isLatestSummary && (
+              <>
+                <Tooltip label={t('Edit')} openDelay={1000} withArrow>
                   <ActionIcon
                     variant="subtle"
                     w="auto"
@@ -104,14 +111,31 @@ const SummaryMessage: FC<SummaryMessageProps> = ({ msg, className, isLatestSumma
                     p={4}
                     bd={0}
                     color="chatbox-secondary"
-                    onClick={() => setShowDeleteConfirm(true)}
+                    onClick={handleEdit}
                   >
-                    <ScalableIcon icon={IconTrash} size={16} />
+                    <ScalableIcon icon={IconPencil} size={16} />
                   </ActionIcon>
                 </Tooltip>
-              )}
-            </Flex>
-          )}
+                {onDelete && (
+                  <Tooltip label={t('Delete')} openDelay={1000} withArrow>
+                    <ActionIcon
+                      variant="subtle"
+                      w="auto"
+                      h="auto"
+                      miw="auto"
+                      mih="auto"
+                      p={4}
+                      bd={0}
+                      color="chatbox-secondary"
+                      onClick={() => setShowDeleteConfirm(true)}
+                    >
+                      <ScalableIcon icon={IconTrash} size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                )}
+              </>
+            )}
+          </Flex>
         </div>
       </Collapse>
 
