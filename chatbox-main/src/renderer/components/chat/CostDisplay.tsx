@@ -1,11 +1,13 @@
-import { Popover, Stack, Text, UnstyledButton } from '@mantine/core'
+import { ActionIcon, Popover, Stack, Text, UnstyledButton } from '@mantine/core'
 import { formatCost, type RequestCost, summarizeCosts } from '@shared/utils/cost'
+import { IconCurrencyDollar } from '@tabler/icons-react'
 import { useTranslation } from 'react-i18next'
 
 export default function CostDisplay(props: {
   costs?: RequestCost[]
   summary?: ReturnType<typeof summarizeCosts>
   chat?: boolean
+  compact?: boolean
 }) {
   const { t } = useTranslation()
   const summary = props.summary ?? summarizeCosts(props.costs ?? [])
@@ -13,11 +15,28 @@ export default function CostDisplay(props: {
   return (
     <Popover position="bottom" withArrow shadow="md" withinPortal>
       <Popover.Target>
-        <UnstyledButton aria-label={t(props.chat ? 'Chat cost' : 'Response cost')} style={{ flexShrink: 0 }}>
-          <Text component="span" size="xs" c="dimmed" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {summary.known ? `${formatCost(summary.usd)}${summary.unknown ? ' +' : ''}` : t('Cost unknown')}
-          </Text>
-        </UnstyledButton>
+        {props.compact && summary.known === 0 ? (
+          <ActionIcon
+            className="controls shrink-0"
+            variant="subtle"
+            size={24}
+            color="chatbox-secondary"
+            aria-label={String(t(props.chat ? 'Chat cost' : 'Response cost'))}
+            title={String(t('Cost unknown'))}
+          >
+            <IconCurrencyDollar strokeWidth={1.8} />
+          </ActionIcon>
+        ) : (
+          <UnstyledButton
+            className="controls"
+            aria-label={t(props.chat ? 'Chat cost' : 'Response cost')}
+            style={{ flexShrink: 0 }}
+          >
+            <Text component="span" size="xs" c="dimmed" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {summary.known ? `${formatCost(summary.usd)}${summary.unknown ? ' +' : ''}` : t('Cost unknown')}
+            </Text>
+          </UnstyledButton>
+        )}
       </Popover.Target>
       <Popover.Dropdown maw={300}>
         <Stack gap="xs" mah={360} style={{ overflowY: 'auto' }}>

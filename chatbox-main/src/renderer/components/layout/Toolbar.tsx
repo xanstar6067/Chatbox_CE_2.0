@@ -19,10 +19,10 @@ import { deleteSession, getSession } from '@/stores/chatStore'
 import { clear as clearSession } from '@/stores/sessionActions'
 import { useUIStore } from '@/stores/uiStore'
 import ActionMenu from '../ActionMenu'
+import { ScalableIcon } from '../common/ScalableIcon'
 import Broom from '../icons/Broom'
 import LayoutExpand from '../icons/LayoutExpand'
 import LayoutShrink from '../icons/LayoutShrink'
-import { ScalableIcon } from '../common/ScalableIcon'
 
 /**
  * 顶部标题工具栏（右侧）
@@ -155,7 +155,7 @@ export default function Toolbar({ sessionId }: { sessionId: string }) {
       </ActionMenu>
     </Flex>
   ) : (
-    <Flex align="center" gap="xs">
+    <Flex align="center" gap="xs" className="controls shrink-0">
       <ActionIcon variant="subtle" size={24} color="chatbox-secondary" onClick={() => setOpenSearchDialog(true)}>
         <IconSearch strokeWidth={1.8} />
       </ActionIcon>

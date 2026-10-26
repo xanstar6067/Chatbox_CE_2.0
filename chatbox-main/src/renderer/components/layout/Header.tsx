@@ -60,7 +60,7 @@ export default function Header(props: { session: Session }) {
         className={clsx('flex-none title-bar', isSmallScreen ? 'bg-chatbox-background-primary' : '')}
       >
         {(!showSidebar || isSmallScreen) && (
-          <Flex align="center" className={needRoomForMacWindowControls ? 'pl-20' : ''}>
+          <Flex align="center" className={clsx('shrink-0', needRoomForMacWindowControls ? 'pl-20' : '')}>
             <ActionIcon
               className="controls"
               variant="subtle"
@@ -74,31 +74,35 @@ export default function Header(props: { session: Session }) {
           </Flex>
         )}
 
-        <Flex
-          align="center"
-          flex={1}
-          className="min-w-0"
-          {...(isSmallScreen ? { justify: 'center', pl: 28, pr: 8 } : {})}
-        >
-          <Text fw={600} size="18px" lineClamp={1} title={currentSession?.name} className="min-w-0 flex-1">
+        <Flex align="center" flex={1} className="min-w-0" {...(isSmallScreen ? { pr: 4 } : {})}>
+          <Text
+            fw={600}
+            size="18px"
+            lineClamp={isSmallScreen ? undefined : 1}
+            truncate={isSmallScreen ? 'end' : undefined}
+            title={currentSession?.name}
+            className="min-w-0 flex-1"
+          >
             {currentSession?.name}
           </Text>
           <Tooltip label={t('Customize settings for the current conversation')}>
             <ActionIcon
               className="controls"
               variant="subtle"
-              color="chatbox-tertiary"
-              size={isSmallScreen ? 20 : 16}
+              color={isSmallScreen ? 'chatbox-secondary' : 'chatbox-tertiary'}
+              size={isSmallScreen ? 24 : 16}
               ml={4}
+              style={{ flexShrink: 0 }}
+              aria-label={String(t('Customize settings for the current conversation'))}
               onClick={editCurrentSession}
             >
-              <ScalableIcon icon={IconPencil} size={14} />
+              {isSmallScreen ? <IconPencil strokeWidth={1.8} /> : <ScalableIcon icon={IconPencil} size={14} />}
             </ActionIcon>
           </Tooltip>
         </Flex>
 
         {(currentSession.type === 'chat' || !currentSession.type) && (
-          <CostDisplay summary={getSessionCost(currentSession)} chat />
+          <CostDisplay summary={getSessionCost(currentSession)} chat compact={isSmallScreen} />
         )}
         <Toolbar sessionId={currentSession.id} />
 
