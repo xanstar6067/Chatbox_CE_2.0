@@ -1,6 +1,7 @@
 import type { LanguageModelUsage } from 'ai'
 import { z } from 'zod'
 import { SessionSettingsSchema } from '../types/settings'
+import { RequestCostSchema } from '../utils/cost'
 import { ModelProviderEnum } from './provider'
 
 // Re-export for backward compatibility
@@ -244,6 +245,8 @@ export const MessageSchema = z.object({
   tokenCount: z.number().optional(), // output token count
   tokensUsed: z.number().optional(), // deprecated, use `usage` instead
   usage: MessageUsageSchema.optional().catch(undefined),
+  costs: z.array(RequestCostSchema).optional().catch(undefined),
+  previousCosts: z.array(RequestCostSchema).optional().catch(undefined),
   // Provider-reported size of the final API request that produced this message. `usage` sums every
   // tool-call step, so it cannot say how large the conversation was; this anchors the context estimate.
   contextUsage: MessageContextUsageSchema.optional().catch(undefined),

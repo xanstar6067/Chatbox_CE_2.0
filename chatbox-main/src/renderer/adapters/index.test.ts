@@ -1,4 +1,10 @@
+import type { ProviderSettings } from '@shared/types'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const testStore = vi.hoisted(() => ({ providers: {} as Record<string, ProviderSettings> }))
+
+vi.mock('@/packages/usage-stats', () => ({ recordUsage: vi.fn() }))
+vi.mock('@/packages/usage-stats/pricing', () => ({ getOpenRouterPricing: vi.fn() }))
 
 vi.mock('@shared/models', () => ({
   getModel: vi.fn().mockReturnValue({
@@ -16,11 +22,16 @@ vi.mock('@shared/models', () => ({
 vi.mock('@/stores/settingsStore', () => ({
   settingsStore: {
     getState: () => ({
+      providers: testStore.providers,
       getSettings: () => ({
         language: 'en',
-        providers: {},
+        providers: testStore.providers,
         theme: 'light',
       }),
+    }),
+    setState: vi.fn((update) => {
+      const result = update({ providers: testStore.providers })
+      testStore.providers = result.providers
     }),
   },
 }))
@@ -79,6 +90,7 @@ vi.mock('./sentry', () => {
 import { getModel } from '@shared/models'
 import type { SessionSettings } from '@shared/types'
 import { createModel } from '@/adapters'
+import { getOpenRouterPricing } from '@/packages/usage-stats/pricing'
 import platform from '@/platform'
 
 function createTestSettings(overrides: SessionSettings = {}): SessionSettings {
@@ -101,6 +113,7 @@ function getFirstGetModelCall() {
 describe('createModel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    testStore.providers = {}
   })
 
   it('passes settings through to getModel', async () => {
@@ -111,6 +124,52 @@ describe('createModel', () => {
     expect(getModel).toHaveBeenCalledWith(settings, expect.any(Object), expect.any(Object), expect.any(Object))
     const callArgs = getFirstGetModelCall()
     expect(callArgs[0]).toBe(settings)
+  })
+
+  it('uses manual OpenRouter prices without fetching the catalog', async () => {
+    const pricing = { input: 2, output: 10, source: 'manual' as const, updatedAt: 1 }
+    testStore.providers = { openrouter: { models: [{ modelId: 'vendor/model', pricing }] } }
+    await createModel(createTestSettings({ provider: 'openrouter', modelId: 'vendor/model' }))
+    expect(getOpenRouterPricing).not.toHaveBeenCalled()
+    expect(getFirstGetModelCall()[1].providers?.openrouter?.models?.[0].pricing).toEqual(pricing)
+  })
+
+  it('saves fetched prices while preserving the model metadata', async () => {
+    const pricing = { input: 1, output: 5, source: 'openrouter' as const, updatedAt: 2 }
+    testStore.providers = {
+      openrouter: { models: [{ modelId: 'vendor/model', nickname: 'My model', capabilities: ['tool_use'] }] },
+    }
+    vi.mocked(getOpenRouterPricing).mockResolvedValueOnce(pricing)
+    await createModel(createTestSettings({ provider: 'openrouter', modelId: 'vendor/model' }))
+    expect(testStore.providers.openrouter.models?.[0]).toMatchObject({
+      nickname: 'My model',
+      capabilities: ['tool_use'],
+      pricing,
+    })
+    expect(getFirstGetModelCall()[1].providers?.openrouter?.models?.[0].pricing).toEqual(pricing)
+  })
+
+  it('keeps saved prices and creates the model when OpenRouter is offline', async () => {
+    const pricing = { input: 1, output: 5, source: 'openrouter' as const, updatedAt: 1 }
+    testStore.providers = { openrouter: { models: [{ modelId: 'vendor/model', pricing }] } }
+    vi.mocked(getOpenRouterPricing).mockRejectedValueOnce(new Error('offline'))
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      await createModel(createTestSettings({ provider: 'openrouter', modelId: 'vendor/model' }))
+      expect(getFirstGetModelCall()[1].providers?.openrouter?.models?.[0].pricing).toEqual(pricing)
+    } finally {
+      warning.mockRestore()
+    }
+  })
+
+  it('preserves manual changes made while a catalog request is in flight', async () => {
+    const manual = { input: 2, output: 10, source: 'manual' as const, updatedAt: 3 }
+    vi.mocked(getOpenRouterPricing).mockImplementationOnce(async () => {
+      testStore.providers = { openrouter: { models: [{ modelId: 'vendor/model', pricing: manual }] } }
+      return { input: 1, output: 5, source: 'openrouter', updatedAt: 2 }
+    })
+    await createModel(createTestSettings({ provider: 'openrouter', modelId: 'vendor/model' }))
+    expect(getFirstGetModelCall()[1].providers?.openrouter?.models?.[0].pricing).toEqual(manual)
   })
 
   it('gets globalSettings from settingsStore', async () => {

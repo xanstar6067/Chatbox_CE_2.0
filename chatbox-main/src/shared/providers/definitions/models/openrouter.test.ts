@@ -299,6 +299,12 @@ describe('OpenRouter', () => {
         contextWindow: 1_048_576,
         maxOutput: 65_536,
         capabilities: ['vision', 'reasoning', 'tool_use'],
+        pricing: expect.objectContaining({
+          input: 0.75,
+          output: 3.75,
+          source: 'openrouter',
+          modelId: 'google/gemini-3.8-flash',
+        }),
       },
       {
         modelId: 'some/legacy-reasoner',

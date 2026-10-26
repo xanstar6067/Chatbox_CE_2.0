@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { ModelPricingSchema } from '../utils/cost'
 import { ModelProviderEnum, ModelProviderType } from './provider'
 import { SkillSettingsSchema } from './skills'
 import { CLASSIC_THEME_ID, CustomThemeSchema } from './theme'
@@ -44,6 +45,7 @@ export const ProviderModelInfoSchema = z.object({
     .catch([]),
   contextWindow: z.number().optional().catch(undefined),
   maxOutput: z.number().optional().catch(undefined),
+  pricing: ModelPricingSchema.optional().catch(undefined),
 })
 
 export const OAuthCredentialsSchema = z.object({

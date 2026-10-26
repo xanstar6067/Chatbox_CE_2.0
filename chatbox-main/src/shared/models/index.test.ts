@@ -35,6 +35,54 @@ const mockDependencies: ModelDependencies = {
 }
 
 describe('getModel', () => {
+  it('adds the configured price snapshot to real provider usage', async () => {
+    const pricing = { input: 2, output: 10, cacheRead: 0.2, source: 'manual' as const, updatedAt: 1 }
+    const globalSettings = getDefaultSettings()
+    globalSettings.providers = { openrouter: { apiKey: 'test-key', models: [{ modelId: 'vendor/model', pricing }] } }
+    const recordUsage = vi.fn()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            id: 'reply',
+            model: 'vendor/model',
+            choices: [{ index: 0, message: { role: 'assistant', content: 'ok' }, finish_reason: 'stop' }],
+            usage: {
+              prompt_tokens: 1000,
+              completion_tokens: 50,
+              total_tokens: 1050,
+              prompt_tokens_details: { cached_tokens: 800 },
+            },
+          }),
+          { headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+    )
+    try {
+      const model = getModel(
+        { provider: ModelProviderEnum.OpenRouter, modelId: 'vendor/model', stream: false },
+        globalSettings,
+        newConfigs(),
+        { ...mockDependencies, recordUsage }
+      )
+      await model.chat([{ role: 'user', content: 'hello' }], { usagePurpose: 'chat' })
+      expect(recordUsage).toHaveBeenCalledTimes(1)
+      const cost = recordUsage.mock.calls[0][0].cost
+      expect(cost).toMatchObject({
+        modelId: 'vendor/model',
+        provider: 'openrouter',
+        pricing,
+        inputTokens: 1000,
+        outputTokens: 50,
+        cacheReadTokens: 800,
+      })
+      expect(cost.usd).toBeCloseTo(0.00106)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('returns OpenAIResponses when provider is OpenAIResponses', () => {
     const sessionSettings: SessionSettings = {
       provider: ModelProviderEnum.OpenAIResponses,

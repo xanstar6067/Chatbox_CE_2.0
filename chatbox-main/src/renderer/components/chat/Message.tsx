@@ -51,6 +51,7 @@ import { useTranslation } from 'react-i18next'
 import { Gallery, Item as GalleryItem } from 'react-photoswipe-gallery'
 import { trackJkClickEvent } from '@/analytics/jk'
 import { JK_EVENTS, JK_PAGE_NAMES } from '@/analytics/jk-events'
+import CostDisplay from '@/components/chat/CostDisplay'
 import Markdown from '@/components/Markdown'
 import { useFetchBlob } from '@/hooks/useBlob'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
@@ -683,7 +684,7 @@ const _Message: FC<Props> = (props) => {
       className={cn(isBubbleLayout ? 'px-1' : '')}
       align={isUserBubble ? 'flex-end' : 'flex-start'}
     >
-      {tipsElements && (
+      {(tipsElements || (msg.role === 'assistant' && !msg.generating && !!msg.costs?.length)) && (
         <Flex
           align="center"
           gap={4}
@@ -692,6 +693,7 @@ const _Message: FC<Props> = (props) => {
           className="overflow-hidden"
         >
           {tipsElements}
+          {msg.role === 'assistant' && !msg.generating && <CostDisplay costs={msg.costs} />}
         </Flex>
       )}
     </Flex>

@@ -112,7 +112,13 @@ export default abstract class BaseConfig implements ModelSettingUtil {
 
     // 先添加所有本地模型
     for (const model of localOptionGroups) {
-      mergedModels.push(model)
+      const remotePricing = remoteOptionGroups.find(
+        (remote) => remote.modelId === model.modelId && remote.pricing
+      )?.pricing
+      mergedModels.push({
+        ...model,
+        pricing: model.pricing?.source === 'manual' ? model.pricing : (remotePricing ?? model.pricing),
+      })
       processedModelIds.add(model.modelId)
     }
 

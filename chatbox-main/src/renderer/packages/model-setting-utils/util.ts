@@ -7,6 +7,7 @@ function updateModelInfo(localModel: ProviderModelInfo, newModelInfo: ProviderMo
   return {
     ...newModelInfo,
     ...omitBy(localModel, identity),
+    pricing: localModel.pricing ?? newModelInfo.pricing,
   }
 }
 

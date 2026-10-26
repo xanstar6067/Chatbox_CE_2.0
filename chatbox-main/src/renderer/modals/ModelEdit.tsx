@@ -1,11 +1,13 @@
 import NiceModal, { useModal } from '@ebay/nice-modal-react'
 import { Button, Checkbox, Flex, Loader, NumberInput, Stack, Text, TextInput, Tooltip } from '@mantine/core'
 import type { ProviderModelInfo } from '@shared/types'
+import type { ModelPricing } from '@shared/utils/cost'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createModelDependencies } from '@/adapters'
 import { AdaptiveSelect } from '@/components/AdaptiveSelect'
 import { AdaptiveModal } from '@/components/common/AdaptiveModal'
+import ModelPricingEditor from '@/components/settings/ModelPricingEditor'
 import platform from '@/platform'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { type ModelTestState, testModelCapabilities } from '@/utils/model-tester'
@@ -22,6 +24,7 @@ const ModelEdit = NiceModal.create((props: { model?: ProviderModelInfo; provider
   const [type, setType] = useState<ProviderModelInfo['type']>(props.model?.type || 'chat')
   const [contextWindow, setContextWindow] = useState<number | undefined>(props.model?.contextWindow)
   const [maxOutput, setMaxOutput] = useState<number | undefined>(props.model?.maxOutput)
+  const [pricing, setPricing] = useState<ModelPricing | undefined>(props.model?.pricing)
   const [testState, setTestState] = useState<ModelTestState>({
     testing: false,
   })
@@ -41,6 +44,7 @@ const ModelEdit = NiceModal.create((props: { model?: ProviderModelInfo; provider
     setType(props.model?.type || 'chat')
     setContextWindow(props.model?.contextWindow)
     setMaxOutput(props.model?.maxOutput)
+    setPricing(props.model?.pricing)
     setTestState({ testing: false })
   }, [props])
 
@@ -77,12 +81,14 @@ const ModelEdit = NiceModal.create((props: { model?: ProviderModelInfo; provider
 
   const handleSave = () => {
     modal.resolve({
+      ...props.model,
       modelId,
       type,
       nickname: nickname || undefined,
       capabilities,
       contextWindow,
       maxOutput,
+      pricing,
     })
     modal.hide()
   }
@@ -218,6 +224,8 @@ const ModelEdit = NiceModal.create((props: { model?: ProviderModelInfo; provider
             </Stack>
           </Flex>
         </Stack>
+
+        {type === 'chat' && <ModelPricingEditor modelId={modelId} value={pricing} onChange={setPricing} />}
 
         <AdaptiveModal.Actions>
           {testState.basicTest?.status === 'success' ? (

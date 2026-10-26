@@ -1,4 +1,5 @@
 import type { OAuthCredentials } from '../oauth/types'
+import type { RequestCost } from '../utils/cost'
 import type { SentryAdapter } from '../utils/sentry_adapter'
 
 export interface ApiRequestOptions {
@@ -36,6 +37,7 @@ export type UsagePurpose = 'chat' | 'other'
 
 /** Token usage of one completed model request, reported for local usage statistics. */
 export interface UsageRecord {
+  cost?: RequestCost
   /** Provider id; filled in by getModel() */
   provider?: string
   modelId: string

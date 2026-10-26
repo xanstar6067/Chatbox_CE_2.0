@@ -108,6 +108,8 @@ export async function initializeTargetMessage(
     firstTokenLatency: undefined,
     // A regenerated reply must not keep the token counts of the response it replaces.
     usage: undefined,
+    costs: undefined,
+    previousCosts: [...(targetMsg.previousCosts ?? []), ...(targetMsg.costs ?? [])],
     contextUsage: undefined,
     isStreamingMode: settings.stream !== false,
   }

@@ -5,8 +5,10 @@ import { IconLayoutSidebarLeftExpand, IconMenu2, IconPencil } from '@tabler/icon
 import clsx from 'clsx'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import CostDisplay from '@/components/chat/CostDisplay'
 import useNeedRoomForWinControls from '@/hooks/useNeedRoomForWinControls'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
+import { getSessionCost } from '@/packages/usage-stats/session-cost'
 import { scheduleGenerateNameAndThreadName } from '@/stores/sessionActions'
 import * as settingActions from '@/stores/settingActions'
 import { useUIStore } from '@/stores/uiStore'
@@ -95,6 +97,9 @@ export default function Header(props: { session: Session }) {
           </Tooltip>
         </Flex>
 
+        {(currentSession.type === 'chat' || !currentSession.type) && (
+          <CostDisplay summary={getSessionCost(currentSession)} chat />
+        )}
         <Toolbar sessionId={currentSession.id} />
 
         <WindowControls className="-mr-3 ml-2" />

@@ -2,6 +2,7 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import { extractReasoningMiddleware, wrapLanguageModel } from 'ai'
 import type { ProviderModelInfo, ToolUseScope } from '../types'
 import type { ModelDependencies } from '../types/adapters'
+import { parseOpenRouterPricing } from '../utils/cost'
 import { OPENROUTER_REASONING_PARAMETERS } from '../utils/openrouter-reasoning'
 import AbstractAISDKModel, { type CallSettings } from './abstract-ai-sdk'
 import { ApiError } from './errors'
@@ -105,6 +106,8 @@ interface ListModelsResponse {
       request?: string
       web_search?: string
       internal_reasoning?: string
+      input_cache_read?: string
+      input_cache_write?: string
     }
     top_provider?: {
       is_moderated?: boolean
@@ -128,7 +131,7 @@ export async function fetchRemoteModels(
   dependencies: ModelDependencies
 ) {
   const headers = {
-    Authorization: `Bearer ${params.apiKey}`,
+    ...(params.apiKey ? { Authorization: `Bearer ${params.apiKey}` } : {}),
     ...(params.extraHeaders || {}),
   }
   const response = params.customFetch
@@ -143,13 +146,16 @@ export async function fetchRemoteModels(
         useProxy: params.useProxy,
       })
   const json: ListModelsResponse = await response.json()
-  if (!json.data) {
+  if (!response.ok || !Array.isArray(json.data)) {
     throw new ApiError(JSON.stringify(json))
   }
   return json.data.map((item) => {
     const modelInfo: ProviderModelInfo = {
       modelId: item.id,
       type: 'chat',
+    }
+    if (new URL(params.apiHost).hostname === 'openrouter.ai') {
+      modelInfo.pricing = parseOpenRouterPricing(item.pricing, item.id)
     }
 
     // Add nickname from OpenRouter name field

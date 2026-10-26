@@ -1,8 +1,9 @@
-import type { ModelInterface } from '../models/types'
 import { enrichModelFromRegistry } from '../model-registry/enrich'
+import type { ModelInterface } from '../models/types'
 import { mergeSharedOAuthProviderSettings, resolveEffectiveApiKey } from '../oauth'
 import type { Config, ProviderModelInfo, ProviderSettings, SessionSettings, Settings } from '../types'
 import type { ModelDependencies } from '../types/adapters'
+import { calculateRequestCost } from '../utils/cost'
 // ChatboxAI must be imported first to ensure it appears at the top of provider lists
 // Import order determines display order in UI (side-effect registration into Map)
 import './definitions/chatboxai'
@@ -141,7 +142,27 @@ export function getModel(
 
   const recordUsage = dependencies.recordUsage
   if (recordUsage) {
-    dependencies = { ...dependencies, recordUsage: (record) => recordUsage({ ...record, provider }) }
+    const pricing = getModelConfig(settings, globalSettings, provider).pricing
+    dependencies = {
+      ...dependencies,
+      recordUsage: (record) =>
+        recordUsage({
+          ...record,
+          provider,
+          cost: calculateRequestCost(
+            {
+              provider,
+              modelId: record.modelId,
+              timestamp: record.timestamp,
+              inputTokens: record.inputTokens,
+              outputTokens: record.outputTokens,
+              cacheReadTokens: record.cacheReadTokens,
+              cacheWriteTokens: record.cacheWriteTokens,
+            },
+            pricing
+          ),
+        }),
+    }
   }
 
   // Check if provider is registered in the new registry

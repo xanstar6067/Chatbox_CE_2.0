@@ -2,6 +2,7 @@ import { buildContext } from '@shared/context'
 import { ChatboxAIAPIError, OCRError } from '@shared/models/errors'
 import type { ChatStreamOptions, ModelStreamPart } from '@shared/models/types'
 import { type Message, type MessageContentParts, ModelProviderEnum } from '@shared/types'
+import { calculateRequestCost } from '@shared/utils/cost'
 import { getMessageText, sequenceMessages } from '@shared/utils/message'
 import type { ToolSet } from 'ai'
 import { t } from 'i18next'
@@ -128,7 +129,17 @@ export async function orchestrateGeneration(
 
   try {
     const dependencies = await createModelDependencies()
+    const recordUsage = dependencies.recordUsage
+    dependencies.recordUsage = (record) => {
+      if (record.purpose === 'chat' && record.cost) {
+        targetMsg = { ...targetMsg, costs: [...(targetMsg.costs ?? []), record.cost] }
+      }
+      recordUsage?.(record)
+    }
     const model = await createModel(settings, dependencies)
+    const requestPricing = settingsStore
+      .getState()
+      .providers?.[settings.provider ?? '']?.models?.find((model) => model.modelId === settings.modelId)?.pricing
     const sessionKnowledgeBaseMap = uiStore.getState().sessionKnowledgeBaseMap
     const knowledgeBase = sessionKnowledgeBaseMap[sessionId]
     const webBrowsing = getSessionWebBrowsing(sessionId, settings.provider)
@@ -277,6 +288,42 @@ export async function orchestrateGeneration(
     for (const part of processorState.contentParts) {
       if (part.type === 'reasoning' && part.startTime && !part.duration) {
         part.duration = Date.now() - part.startTime
+      }
+    }
+
+    // For a single request only, fill missing provider counts with local estimates.
+    // Multiple tool steps need their own usage; estimating them from the final prompt would undercount.
+    if (!targetMsg.costs?.length || (targetMsg.costs.length === 1 && targetMsg.costs[0].usd === undefined)) {
+      const existing = targetMsg.costs?.[0]
+      const usage = processorState.usage
+      const pricing = existing?.pricing ?? requestPricing
+      const inputTokens = existing?.inputTokens ?? usage?.inputTokens
+      const outputTokens = existing?.outputTokens ?? usage?.outputTokens
+      targetMsg = {
+        ...targetMsg,
+        costs: [
+          calculateRequestCost(
+            {
+              provider: settings.provider,
+              modelId: settings.modelId ?? model.modelId,
+              timestamp: existing?.timestamp ?? Date.now(),
+              inputTokens:
+                inputTokens ??
+                estimateTokensFromMessages(injectedMessages, 'input', {
+                  provider: settings.provider ?? '',
+                  modelId: model.modelId,
+                }),
+              outputTokens:
+                outputTokens ??
+                estimateTokensFromMessages([{ ...targetMsg, contentParts: processorState.contentParts }]),
+              cacheReadTokens:
+                existing?.cacheReadTokens ?? usage?.inputTokenDetails?.cacheReadTokens ?? usage?.cachedInputTokens,
+              cacheWriteTokens: existing?.cacheWriteTokens ?? usage?.inputTokenDetails?.cacheWriteTokens,
+              usageEstimated: inputTokens === undefined || outputTokens === undefined,
+            },
+            pricing
+          ),
+        ],
       }
     }
 
