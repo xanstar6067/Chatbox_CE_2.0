@@ -102,6 +102,7 @@ export function settings(): Settings {
     pasteLongTextAsAFile: true,
 
     autoGenerateTitle: true,
+    autoOpenRouterPricing: true,
 
     compactionPrompts: [],
     activeCompactionPromptId: 'builtin-detailed',

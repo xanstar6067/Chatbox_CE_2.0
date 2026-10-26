@@ -7,6 +7,7 @@ import { getOpenRouterPricing } from '@/packages/usage-stats/pricing'
 
 export default function ModelPricingEditor(props: {
   modelId: string
+  providerId?: string
   value?: ModelPricing
   onChange: (value?: ModelPricing) => void
 }) {
@@ -30,12 +31,14 @@ export default function ModelPricingEditor(props: {
       const pricing = await getOpenRouterPricing(
         openRouterId.trim() || props.modelId,
         await createModelDependencies(),
-        true
+        true,
+        props.providerId ?? 'custom'
       )
       if (!pricing) {
         setError(String(t('No OpenRouter pricing found. Enter the exact OpenRouter model ID.')))
       } else {
         props.onChange(pricing)
+        setOpenRouterId(pricing.modelId ?? openRouterId)
       }
     } catch {
       setError(String(t('Could not load OpenRouter pricing. Your saved rates have been kept.')))
@@ -104,6 +107,9 @@ export default function ModelPricingEditor(props: {
       )}
       <TextInput
         label={t('OpenRouter model ID')}
+        description={t(
+          'OpenRouter uses IDs like google/gemini-3.8-flash. Native provider IDs are matched automatically and kept unchanged.'
+        )}
         placeholder={props.modelId || 'provider/model'}
         value={openRouterId}
         onChange={(event) => setOpenRouterId(event.currentTarget.value)}
@@ -123,7 +129,7 @@ export default function ModelPricingEditor(props: {
       )}
       <Text size="xs" c="dimmed">
         {t(
-          'OpenRouter models refresh prices automatically. Manual prices take priority. Prices imported for other providers are reference estimates.'
+          'Automatic lookup for connected providers is controlled in Spending Statistics. Manual prices take priority.'
         )}
       </Text>
     </Stack>

@@ -163,6 +163,7 @@ describe('createModel', () => {
   })
 
   it('preserves manual changes made while a catalog request is in flight', async () => {
+    testStore.providers = { openrouter: { models: [{ modelId: 'vendor/model' }] } }
     const manual = { input: 2, output: 10, source: 'manual' as const, updatedAt: 3 }
     vi.mocked(getOpenRouterPricing).mockImplementationOnce(async () => {
       testStore.providers = { openrouter: { models: [{ modelId: 'vendor/model', pricing: manual }] } }

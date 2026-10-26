@@ -44,7 +44,9 @@ import './setup/jk_analytics_init'
 // 引入保护代码
 import './setup/protect'
 import { QueryClientProvider } from '@tanstack/react-query'
+import { createModelDependencies } from './adapters'
 import { initUsageStats } from './packages/usage-stats'
+import { initAutomaticPricing } from './packages/usage-stats/connected-pricing'
 import { initSessionAttachmentRagMaintenance } from './setup/session_attachment_rag_maintenance'
 import { initLastUsedModelStore } from './stores/lastUsedModelStore'
 import { initOnboardingStore } from './stores/onboardingStore'
@@ -159,6 +161,7 @@ initializeApp()
     applyThemeColors(findTheme(settings.themePresetId, settings.customThemes).colors)
     initLoginLicenseStateReconciliation()
     initUsageStats()
+    initAutomaticPricing(createModelDependencies)
 
     // Initialize auto-updater event listeners (desktop only, idempotent)
     if (platform.type === 'desktop') {

@@ -225,7 +225,9 @@ const ModelEdit = NiceModal.create((props: { model?: ProviderModelInfo; provider
           </Flex>
         </Stack>
 
-        {type === 'chat' && <ModelPricingEditor modelId={modelId} value={pricing} onChange={setPricing} />}
+        {type === 'chat' && (
+          <ModelPricingEditor modelId={modelId} providerId={props.providerId} value={pricing} onChange={setPricing} />
+        )}
 
         <AdaptiveModal.Actions>
           {testState.basicTest?.status === 'success' ? (

@@ -322,6 +322,7 @@ export enum Theme {
 }
 
 export const SettingsSchema = GlobalSessionSettingsSchema.extend({
+  autoOpenRouterPricing: z.boolean().default(true),
   providers: z.record(z.string(), ProviderSettingsSchema).optional().catch(undefined),
   customProviders: z.array(CustomProviderBaseInfoSchema).optional().catch(undefined),
   favoritedModels: z

@@ -6,6 +6,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ScalableIcon } from '@/components/common/ScalableIcon'
+import AutomaticPricingSettings from '@/components/settings/AutomaticPricingSettings'
 import { daysInMonth, monthKey, previousMonthKey } from '@/packages/usage-stats/aggregate'
 import {
   type ChatSpending,
@@ -125,6 +126,8 @@ function RouteComponent() {
           </Stack>
         )}
       </Stack>
+
+      <AutomaticPricingSettings />
 
       <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="sm">
         {(['current', 'previous'] as const).map((period) => {

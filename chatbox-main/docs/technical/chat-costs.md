@@ -5,13 +5,31 @@ USD per million tokens; the optional request fee uses USD per API request.
 Cached reads and writes have separate optional rates. Zero means free; an
 unknown rate is not treated as zero.
 
-OpenRouter chats automatically load the exact model ID from the public
+Automatic pricing loads rates from the public
 [OpenRouter model catalog](https://openrouter.ai/docs/api/api-reference/models/list-all-models-and-their-properties).
 The catalog is cached in memory for one hour. The latest model rate is saved in
 provider settings for offline use. A failed fetch keeps saved rates and is
-retried after one minute. Manual rates take priority. The model editor can also
-import an exact OpenRouter model ID as a reference price for another provider.
-Prices imported for other providers refresh only when explicitly requested.
+retried after one minute. Manual rates take priority.
+
+Settings → Spending Statistics has an automatic-lookup checkbox (enabled by
+default) and a Find and update prices button. Automatic lookup checks connected
+chat models at startup, after model-list/authentication changes, on focus and
+hourly. One cached catalog serves the whole batch; the explicit button forces a
+catalog refresh and also works with automatic lookup disabled. Ollama, LM Studio
+and subscription-based Chatbox AI are excluded from automatic reference pricing.
+
+Native provider IDs remain unchanged. For example, Google `gemini-3.8-flash` is
+matched to the catalog ID `google/gemini-3.8-flash`; a Google `models/` prefix is
+also handled. Anthropic version punctuation and dated native IDs are normalized
+only within Anthropic's catalog namespace. Other aliases need a unique exact
+basename, or an explicit catalog ID in the model editor. Ambiguous names, missing
+versions and free/paid variants are never merged by fuzzy similarity. The model
+editor displays the resolved catalog ID separately from the API model ID.
+
+Rates fetched for direct Google, OpenAI and other providers are OpenRouter
+reference estimates, not a guarantee of the provider's own invoice. Failed or
+unmatched lookups keep saved rates. Removed models are not reinserted, concurrent
+manual edits take priority, and existing chat cost snapshots are never repriced.
 
 Each completed API step produces a `UsageRecord.cost` with token counts, USD
 estimate, provider/model identity, timestamp and a copy of the tariff. Chat

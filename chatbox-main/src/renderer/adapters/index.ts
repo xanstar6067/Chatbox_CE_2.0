@@ -6,7 +6,7 @@ import type { SessionSettings } from '@shared/types'
 import type { ApiRequestOptions, ModelDependencies } from '@shared/types/adapters'
 import { getOS } from '@/packages/navigator'
 import { recordUsage } from '@/packages/usage-stats'
-import { getOpenRouterPricing } from '@/packages/usage-stats/pricing'
+import { ensureModelPricing } from '@/packages/usage-stats/connected-pricing'
 import platform from '@/platform'
 import storage from '@/storage'
 import { StorageKeyGenerator } from '@/storage/StoreStorage'
@@ -128,42 +128,9 @@ export async function createModel(
   settings: SessionSettings,
   dependencies?: ModelDependencies
 ): Promise<ModelInterface> {
-  let globalSettings = settingsStore.getState().getSettings()
   const configs = await platform.getConfig()
   const modelDependencies = dependencies ?? (await createModelDependencies())
-  if (settings.provider === 'openrouter' && settings.modelId) {
-    const modelId = settings.modelId
-    const providerSettings = globalSettings.providers?.openrouter
-    const model = providerSettings?.models?.find((model) => model.modelId === settings.modelId)
-    if (model?.pricing?.source !== 'manual') {
-      try {
-        const pricing = await getOpenRouterPricing(settings.modelId, modelDependencies)
-        if (pricing) {
-          // Persist the fetched rate for offline use; each request keeps its own immutable snapshot.
-          settingsStore.setState((state) => {
-            const current = state.providers?.openrouter
-            const models = current?.models ?? []
-            const saved = models.find((item) => item.modelId === settings.modelId)
-            if (saved?.pricing?.source === 'manual' || saved?.pricing?.updatedAt === pricing.updatedAt) return state
-            const pricedModel = { ...saved, modelId, pricing }
-            return {
-              providers: {
-                ...state.providers,
-                openrouter: {
-                  ...current,
-                  models: saved
-                    ? models.map((item) => (item.modelId === saved.modelId ? pricedModel : item))
-                    : [...models, pricedModel],
-                },
-              },
-            }
-          })
-          globalSettings = settingsStore.getState().getSettings()
-        }
-      } catch (error) {
-        console.warn('OpenRouter pricing unavailable; using the saved rate if available', error)
-      }
-    }
-  }
+  await ensureModelPricing(settings, modelDependencies)
+  const globalSettings = settingsStore.getState().getSettings()
   return getModel(settings, globalSettings, configs, modelDependencies)
 }
