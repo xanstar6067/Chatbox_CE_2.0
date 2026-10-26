@@ -30,4 +30,22 @@ This is an estimate, not an account balance or invoice. Paid search, media,
 conditional/long-context pricing, routing premiums and other surcharges are not
 included. Background calls such as automatic titles and deleted messages are
 excluded from the chat total. The existing monthly token statistics are
-unchanged; the per-request cost hook can support later spending reports.
+unchanged.
+
+## Spending statistics
+
+Settings → Spending Statistics (`/settings/costs`) has a coin icon, monthly totals,
+a daily chart, and a searchable chat list sorted by recorded cost. Existing chats
+open from the list. Deleted chats retain their last recorded name and spending
+but cannot be opened. Unassigned background requests have a separate row.
+
+The `spending-stats` storage entry keeps independent monthly aggregates. Only the
+current and previous calendar months are retained. A month expires as a whole,
+including its daily totals and chat rows, on startup, resume, the calendar
+boundary, or the next recorded request. Original conversations are not deleted.
+
+Saved reply costs are imported once using their original timestamps and prices,
+including retries and alternate branches. Live requests recorded after tracking
+started are excluded from the import to prevent double-counting. Missing prices
+remain unknown, and the UI marks incomplete totals. The per-chat session data is
+attached by chat orchestration; service calls without a session are unassigned.

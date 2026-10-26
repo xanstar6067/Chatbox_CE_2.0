@@ -12,6 +12,7 @@ import {
   retentionStart,
   type UsageStatsState,
 } from './aggregate'
+import { initSpendingStats, recordSpending } from './spending-store'
 
 export * from './aggregate'
 
@@ -64,9 +65,11 @@ function loadUsageStats(): Promise<UsageStatsState> {
  */
 export function initUsageStats() {
   void loadUsageStats()
+  initSpendingStats()
 }
 
 export function recordUsage(record: UsageRecord) {
+  recordSpending(record)
   void loadUsageStats().then((stats) => {
     const added = addUsageRecord(stats, record)
     const pruned = pruneUsageMonths(stats)

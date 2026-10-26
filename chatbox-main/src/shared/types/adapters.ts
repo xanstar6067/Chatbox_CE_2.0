@@ -38,6 +38,8 @@ export type UsagePurpose = 'chat' | 'other'
 /** Token usage of one completed model request, reported for local usage statistics. */
 export interface UsageRecord {
   cost?: RequestCost
+  sessionId?: string
+  sessionName?: string
   /** Provider id; filled in by getModel() */
   provider?: string
   modelId: string

@@ -134,7 +134,7 @@ export async function orchestrateGeneration(
       if (record.purpose === 'chat' && record.cost) {
         targetMsg = { ...targetMsg, costs: [...(targetMsg.costs ?? []), record.cost] }
       }
-      recordUsage?.(record)
+      recordUsage?.({ ...record, sessionId, sessionName: session.name })
     }
     const model = await createModel(settings, dependencies)
     const requestPricing = settingsStore

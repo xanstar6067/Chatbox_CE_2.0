@@ -8,6 +8,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconCircleDottedLetterM,
+  IconCoins,
   IconFileText,
   IconInfoCircle,
   IconKeyboard,
@@ -100,6 +101,11 @@ const ITEMS = [
     key: 'usage',
     label: 'Usage Statistics',
     icon: <IconChartBar className="w-full h-full" />,
+  },
+  {
+    key: 'costs',
+    label: 'Spending Statistics',
+    icon: <IconCoins className="w-full h-full" />,
   },
   ...(platform.type === 'mobile'
     ? []
