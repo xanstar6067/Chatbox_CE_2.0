@@ -15,14 +15,14 @@ export default function CostDisplay(props: {
   return (
     <Popover position="bottom" withArrow shadow="md" withinPortal>
       <Popover.Target>
-        {props.compact && summary.known === 0 ? (
+        {props.compact ? (
           <ActionIcon
             className="controls shrink-0"
             variant="subtle"
             size={24}
             color="chatbox-secondary"
             aria-label={String(t(props.chat ? 'Chat cost' : 'Response cost'))}
-            title={String(t('Cost unknown'))}
+            title={summary.known ? formatCost(summary.usd) : String(t('Cost unknown'))}
           >
             <IconCurrencyDollar strokeWidth={1.8} />
           </ActionIcon>
