@@ -1208,5 +1208,17 @@
   "Some requests have no price or usage data. The total is incomplete.": "Для части запросов нет цены или данных о расходе. Итоговая сумма неполная.",
   "Estimated from saved token usage and prices at request time. Tools, media and provider-specific surcharges may be billed separately.": "Оценка по сохранённому расходу токенов и тарифам на момент запроса. Инструменты, медиа и сборы провайдера могут оплачиваться отдельно.",
   "Includes saved threads and regenerated replies. Deleted messages and background requests are excluded.": "Включает сохранённые ветки и повторные ответы. Удалённые сообщения и фоновые запросы не учитываются.",
-  "Estimated tokens": "Токены оценены приблизительно"
+  "Estimated tokens": "Токены оценены приблизительно",
+  "Copilot role": "Роль копилота",
+  "Select a copilot": "Выбрать копилота",
+  "No copilots found": "Копилоты не найдены",
+  "Role instruction modified": "Инструкция роли изменена",
+  "Save current role?": "Сохранить текущую роль?",
+  "The current instruction has changes. Save it as a new copilot before switching?": "Текущая инструкция изменена. Сохранить её как нового копилота перед переключением?",
+  "Switch without saving": "Переключить без сохранения",
+  "Save as new copilot": "Сохранить как нового копилота",
+  "Restart cost counting": "Пересчитывать заново",
+  "Counting since {{date}}": "Отсчёт с {{date}}",
+  "Start this chat total from zero. Saved response costs and spending statistics are kept.": "Начать подсчёт стоимости этого чата с нуля. Стоимость отдельных ответов и статистика расходов сохранятся.",
+  "Could not reset chat cost. Please try again.": "Не удалось сбросить стоимость чата. Попробуйте ещё раз."
 }

@@ -1208,5 +1208,17 @@
   "Some requests have no price or usage data. The total is incomplete.": "Some requests have no price or usage data. The total is incomplete.",
   "Estimated from saved token usage and prices at request time. Tools, media and provider-specific surcharges may be billed separately.": "Estimated from saved token usage and prices at request time. Tools, media and provider-specific surcharges may be billed separately.",
   "Includes saved threads and regenerated replies. Deleted messages and background requests are excluded.": "Includes saved threads and regenerated replies. Deleted messages and background requests are excluded.",
-  "Estimated tokens": "Estimated tokens"
+  "Estimated tokens": "Estimated tokens",
+  "Copilot role": "Copilot role",
+  "Select a copilot": "Select a copilot",
+  "No copilots found": "No copilots found",
+  "Role instruction modified": "Role instruction modified",
+  "Save current role?": "Save current role?",
+  "The current instruction has changes. Save it as a new copilot before switching?": "The current instruction has changes. Save it as a new copilot before switching?",
+  "Switch without saving": "Switch without saving",
+  "Save as new copilot": "Save as new copilot",
+  "Restart cost counting": "Restart cost counting",
+  "Counting since {{date}}": "Counting since {{date}}",
+  "Start this chat total from zero. Saved response costs and spending statistics are kept.": "Start this chat total from zero. Saved response costs and spending statistics are kept.",
+  "Could not reset chat cost. Please try again.": "Could not reset chat cost. Please try again."
 }

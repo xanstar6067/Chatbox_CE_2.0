@@ -14,6 +14,7 @@ import {
   type Updater,
   type UpdaterFn,
 } from '@shared/types'
+import { getMessageText } from '@shared/utils/message'
 import { type InfiniteData, useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import compact from 'lodash/compact'
 import isEmpty from 'lodash/isEmpty'
@@ -516,9 +517,16 @@ export async function updateMessage(
     }
     const message = session.messages.find((m) => m.id === messageId)
     if (message) {
+      const messages = updateMessages(session.messages)
+      const updatedMessage = messages.find((m) => m.id === messageId) ?? message
       return {
         ...session,
-        messages: updateMessages(session.messages),
+        messages,
+        copilotPromptModified:
+          message.role === 'system' &&
+          (updatedMessage.role !== 'system' || getMessageText(message) !== getMessageText(updatedMessage))
+            ? true
+            : session.copilotPromptModified,
       }
     }
 

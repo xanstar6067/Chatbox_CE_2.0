@@ -9,6 +9,7 @@ import CostDisplay from '@/components/chat/CostDisplay'
 import useNeedRoomForWinControls from '@/hooks/useNeedRoomForWinControls'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import { getSessionCost } from '@/packages/usage-stats/session-cost'
+import { updateSession } from '@/stores/chatStore'
 import { scheduleGenerateNameAndThreadName } from '@/stores/sessionActions'
 import * as settingActions from '@/stores/settingActions'
 import { useUIStore } from '@/stores/uiStore'
@@ -102,7 +103,13 @@ export default function Header(props: { session: Session }) {
         </Flex>
 
         {(currentSession.type === 'chat' || !currentSession.type) && (
-          <CostDisplay summary={getSessionCost(currentSession)} chat compact={isSmallScreen} />
+          <CostDisplay
+            summary={getSessionCost(currentSession)}
+            chat
+            compact={isSmallScreen}
+            resetAt={currentSession.costResetAt}
+            onReset={() => updateSession(currentSession.id, { costResetAt: Date.now() })}
+          />
         )}
         <Toolbar sessionId={currentSession.id} />
 

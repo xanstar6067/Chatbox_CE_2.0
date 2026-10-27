@@ -88,28 +88,33 @@ function Index() {
     [myCopilots, remoteCopilots, selectedCopilotId]
   )
   useEffect(() => {
-    setSession((old) => ({
-      ...old,
-      assistantAvatarKey:
-        selectedCopilot?.avatar?.type === 'storage-key' ? selectedCopilot.avatar.storageKey : undefined,
-      picUrl: selectedCopilot?.avatar?.type === 'url' ? selectedCopilot.avatar.url : selectedCopilot?.picUrl,
-      backgroundImage: selectedCopilot?.backgroundImage,
-      name: selectedCopilot?.name || 'Untitled',
-      messages: selectedCopilot
-        ? [
-            {
-              id: uuidv4(),
-              role: 'system',
-              contentParts: [
-                {
-                  type: 'text',
-                  text: selectedCopilot.prompt,
-                },
-              ],
-            },
-          ]
-        : initEmptyChatSession().messages,
-    }))
+    setSession((old) =>
+      old.copilotPromptModified !== undefined
+        ? old
+        : {
+            ...old,
+            copilotPromptModified: false,
+            assistantAvatarKey:
+              selectedCopilot?.avatar?.type === 'storage-key' ? selectedCopilot.avatar.storageKey : undefined,
+            picUrl: selectedCopilot?.avatar?.type === 'url' ? selectedCopilot.avatar.url : selectedCopilot?.picUrl,
+            backgroundImage: selectedCopilot?.backgroundImage,
+            name: selectedCopilot?.name || 'Untitled',
+            messages: selectedCopilot
+              ? [
+                  {
+                    id: uuidv4(),
+                    role: 'system',
+                    contentParts: [
+                      {
+                        type: 'text',
+                        text: selectedCopilot.prompt,
+                      },
+                    ],
+                  },
+                ]
+              : initEmptyChatSession().messages,
+          }
+    )
   }, [selectedCopilot])
 
   const routerState = useRouterState()
@@ -126,6 +131,7 @@ function Index() {
       setSession((old) => ({
         ...old,
         copilotId: c.id,
+        copilotPromptModified: false,
         assistantAvatarKey: c.avatar?.type === 'storage-key' ? c.avatar.storageKey : undefined,
         picUrl: c.avatar?.type === 'url' ? c.avatar.url : c.picUrl,
         backgroundImage: c.backgroundImage,
@@ -144,7 +150,7 @@ function Index() {
         ],
       }))
     } else if (copilotId) {
-      setSession((old) => ({ ...old, copilotId }))
+      setSession((old) => ({ ...old, copilotId, copilotPromptModified: undefined }))
     }
   }, [routerState.location.search])
 
@@ -158,6 +164,7 @@ function Index() {
         backgroundImage: session.backgroundImage,
         messages: session.messages,
         copilotId: session.copilotId,
+        copilotPromptModified: session.copilotPromptModified,
         settings: session.settings,
       })
 
@@ -319,7 +326,9 @@ function Index() {
                     radius={16}
                     c="chatbox-tertiary"
                     bg="#F1F3F5"
-                    onClick={() => setSession((old) => ({ ...old, copilotId: undefined }))}
+                    onClick={() =>
+                      setSession((old) => ({ ...old, copilotId: undefined, copilotPromptModified: undefined }))
+                    }
                   >
                     <ScalableIcon icon={IconX} size={24} />
                   </ActionIcon>
@@ -333,7 +342,11 @@ function Index() {
             </Box>
           ) : (
             showCopilotsInNewSession && (
-              <CopilotPicker onSelect={(copilot) => setSession((old) => ({ ...old, copilotId: copilot?.id }))} />
+              <CopilotPicker
+                onSelect={(copilot) =>
+                  setSession((old) => ({ ...old, copilotId: copilot?.id, copilotPromptModified: undefined }))
+                }
+              />
             )
           )}
 

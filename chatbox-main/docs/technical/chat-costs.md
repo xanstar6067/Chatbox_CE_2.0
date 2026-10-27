@@ -44,6 +44,13 @@ preserve replaced costs in `Message.previousCosts`. Historical messages without
 cost records and steps missing prices are marked incomplete. Old messages are
 not repriced using today's rates.
 
+The chat cost popover has a Restart cost counting button. It saves a
+`Session.costResetAt` timestamp and starts the chat total from zero, including
+copied conversations. Only request costs newer than that timestamp contribute
+to the total, across threads and regenerated replies. Individual reply cost
+records and monthly spending statistics are retained. The zero total remains
+visible after a reset, along with the new counting start time.
+
 This is an estimate, not an account balance or invoice. Paid search, media,
 conditional/long-context pricing, routing premiums and other surcharges are not
 included. Background calls such as automatic titles and deleted messages are

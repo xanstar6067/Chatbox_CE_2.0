@@ -11,12 +11,22 @@ export function getSessionCost(session: Session) {
   const seen = new Set<string>()
   const costs: RequestCost[] = []
   let untracked = 0
+  const resetAt = session.costResetAt
   for (const message of messages) {
     if (message.role !== 'assistant' || seen.has(message.id)) continue
     seen.add(message.id)
-    costs.push(...(message.costs ?? []))
-    costs.push(...(message.previousCosts ?? []))
-    if (!message.generating && !message.costs?.length) untracked++
+    costs.push(
+      ...[...(message.costs ?? []), ...(message.previousCosts ?? [])].filter(
+        (cost) => resetAt === undefined || cost.timestamp > resetAt
+      )
+    )
+    if (
+      !message.generating &&
+      !message.costs?.length &&
+      (resetAt === undefined || (message.timestamp ?? 0) > resetAt)
+    ) {
+      untracked++
+    }
   }
   const summary = summarizeCosts(costs)
   return { ...summary, unknown: summary.unknown + untracked }

@@ -1,27 +1,7 @@
 import NiceModal, { useModal } from '@ebay/nice-modal-react'
-import {
-  ActionIcon,
-  Box,
-  Button,
-  FileButton,
-  Flex,
-  Input,
-  Slider,
-  Stack,
-  Switch,
-  Text,
-  Textarea,
-  Tooltip,
-} from '@mantine/core'
+import { ActionIcon, Box, Button, FileButton, Flex, Input, Slider, Stack, Switch, Text, Tooltip } from '@mantine/core'
 import { pictureSessionSettings } from '@shared/defaults'
-import {
-  createMessage,
-  isChatSession,
-  isPictureSession,
-  ModelProviderEnum,
-  type Session,
-  type SessionSettings,
-} from '@shared/types'
+import { isChatSession, isPictureSession, ModelProviderEnum, type Session, type SessionSettings } from '@shared/types'
 import {
   type GoogleThinkingLevel,
   getDefaultGoogleThinkingLevel,
@@ -42,6 +22,7 @@ import { IconInfoCircle, IconTrash, IconUpload } from '@tabler/icons-react'
 import { pick } from 'lodash'
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { CopilotPromptEditor } from '@/components/CopilotPromptEditor'
 import { AdaptiveModal } from '@/components/common/AdaptiveModal'
 import { AssistantAvatar } from '@/components/common/Avatar'
 import LazyNumberInput from '@/components/common/LazyNumberInput'
@@ -52,6 +33,7 @@ import { handleImageInputAndSave, ImageInStorage } from '@/components/Image'
 import ImageStyleSelect from '@/components/ImageStyleSelect'
 import { useOpenRouterModelReasoning } from '@/hooks/useOpenRouterModelReasoning'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
+import { setSessionPrompt } from '@/packages/copilot-prompt'
 import { trackingEvent } from '@/packages/event'
 import storage from '@/storage'
 import { StorageKeyGenerator } from '@/storage/StoreStorage'
@@ -79,7 +61,10 @@ const SessionSettingsModal = NiceModal.create(
       }
     }, [session])
 
-    const [systemPrompt, setSystemPrompt] = useState('')
+    const [systemPrompt, setSystemPrompt] = useState(() => {
+      const systemMessage = session?.messages.find((message) => message.role === 'system')
+      return systemMessage ? getMessageText(systemMessage) : ''
+    })
     useEffect(() => {
       if (!session) {
         setSystemPrompt('')
@@ -120,20 +105,7 @@ const SessionSettingsModal = NiceModal.create(
 
     const applySessionChanges = (target: Session) => {
       target.name = (target.name ?? '').trim() || session.name
-      const trimmed = systemPrompt.trim()
-      const messages = Array.isArray(target.messages) ? [...target.messages] : []
-      if (trimmed === '') {
-        target.messages = messages.filter((m) => m.role !== 'system')
-      } else {
-        const idx = messages.findIndex((m) => m.role === 'system')
-        if (idx >= 0) {
-          const sys = { ...messages[idx], contentParts: [{ type: 'text' as const, text: trimmed }] }
-          target.messages = [...messages.slice(0, idx), sys, ...messages.slice(idx + 1)]
-        } else {
-          target.messages = [createMessage('system', trimmed), ...messages]
-        }
-      }
-      return target
+      return setSessionPrompt(target, systemPrompt)
     }
     const onSave = () => {
       if (!session || !editingData) {
@@ -146,16 +118,18 @@ const SessionSettingsModal = NiceModal.create(
             ...(s ?? {}),
             ...getSessionMeta(editingData),
             settings: editingData.settings,
+            copilotId: editingData.copilotId,
+            copilotPromptModified: editingData.copilotPromptModified,
           } as Session
 
           return applySessionChanges(merged)
         })
       } else {
-        applySessionChanges(editingData)
+        modal.resolve(applySessionChanges(editingData))
       }
 
       // setChatConfigDialogSessionId(null)
-      modal.resolve(editingData)
+      if (!disableAutoSave) modal.resolve(editingData)
       modal.hide()
     }
 
@@ -238,19 +212,12 @@ const SessionSettingsModal = NiceModal.create(
               />
             </Stack>
 
-            <Textarea
-              label={t('Instruction (System Prompt)')}
-              placeholder={t('Copilot Prompt Demo') || ''}
-              autosize
-              minRows={2}
-              maxRows={12}
+            <CopilotPromptEditor
+              session={editingData}
               value={systemPrompt}
-              onChange={(event) => setSystemPrompt(event.target.value)}
-              classNames={{
-                input: '!text-chatbox-tint-primary',
-              }}
-              styles={{
-                input: { touchAction: 'manipulation' },
+              onChange={(prompt, state) => {
+                setSystemPrompt(prompt)
+                setEditingData({ ...editingData, ...state })
               }}
             />
 
